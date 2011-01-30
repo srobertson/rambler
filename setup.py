@@ -7,7 +7,7 @@ setup(
     author='Scott Robertson',
     author_email='srobertson@codeit.com',
     #package_dir = {'': 'src'},
-    packages = ['Rambler'],
+    packages = ['Rambler','Rambler.controllers'],
     install_requires = ['zope.interface','dateutils']
     #test_suite = 'your.module.tests',
 )
