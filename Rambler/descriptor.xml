@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+
+<ejb-jar>
+
+<!-- core services -->
+
+  <service>
+    <name>EventService</name>
+
+    <description>Provides a mechanism for objects to communicate with
+    each other without having any knowledge of the other
+    object.</description>
+    <class>Rambler.EventChannel.EventChannel</class>
+  </service>
+
+<!-- Handlers should be replaced by component loaders
+  <service>
+   <name>EntityHandler</name>
+
+   <description>Populates the EntityDescriptionService with Entity
+   descriptions that are defined in the descriptor.xml file.</description>
+   <class>Rambler.EntityDescriptionService.EntityHandler</class>
+   <bind>
+    <component>EntityDescriptionService</component>
+    <interface>object</interface>
+    <attribute>eds</attribute>
+   </bind>
+  </service>
+-->
+
+  <service>
+    <name>TXNDescriptionService</name>
+
+    <description>Tracks object's transactional requirements, such as
+    whether they need a transaction running or not before their
+    methods are invoked.</description>
+    <class>Rambler.TXNDescriptionService.TXNDescriptionService</class>
+  </service>
+
+  <service>
+    <name>TXNHandler</name>
+
+    <description>Populates the TXNDescriptionService with information
+    from a descriptor file.</description>
+    <class>Rambler.TXNDescriptionService.TDSHandler</class>
+
+    <bind>
+     <component>TXNDescriptionService</component>
+     <attribute>txnDescService</attribute>
+    </bind>
+
+  </service>
+
+  <service>
+   <name>XMLPropertyListService</name>
+
+   <description>Serializes python objects to and from xml in a format
+   simmilar to Apple's property list service.</description>
+
+   <class>Rambler.XMLPropertyListService.XMLPropertyListService</class>
+  </service>
+
+  
+  <service>
+    <name>TimerService</name>
+    <description>Provides methods for async calls.</description>
+    <class>Rambler.TimerService.TimerService</class>
+  </service>
+
+   <session>
+    <name>Query</name>
+    <description>Allows remote clients to Query for entities.</description>
+    <class>Rambler.QueryService.QueryService</class>
+    
+    <!-- remote>epo.Recordset</remote -->
+    <!-- TODO: Develop native interfaces that don't depend on corba. -->
+    <!-- home>epo.QueryHome</home -->
+
+  </session>
+
+  <session>
+    <name>DictConfigSource</name>
+    <class>Rambler.ciConfigService.DictConfigSource</class>
+  </session>
+  <session>
+    <name>BasicConfigSource</name>
+    <class>Rambler.ciConfigService.BasicConfigSource</class>
+  </session>
+
+
+
+</ejb-jar>
+

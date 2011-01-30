@@ -1,0 +1,34 @@
+#ifndef _APPMANAGER_IDL_
+#define _APPMANAGER_IDL_
+
+#include "epo.idl"
+
+
+module epo {
+
+  struct AppInfo{
+    string name;
+    string status;
+    string configStatus;
+    unsigned short pid;
+  };
+
+  typedef sequence<string> AppNames;
+  typedef sequence<AppInfo> AppInfos;
+  
+  interface ciIAppManager {
+    void refresh()  
+      raises (ciError);
+
+    void start(in AppNames appNames_)  
+      raises (ciError);
+    AppInfos status(in AppNames appNames_)
+      raises (ciError);
+    void stop(in AppNames appNames_)
+      raises (ciError);
+    void cleanup(in AppNames appNames_)
+      raises (ciError);
+  };
+};
+
+#endif

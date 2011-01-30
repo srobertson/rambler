@@ -1,0 +1,246 @@
+
+class RObject(object):
+    """Rambler objects provide key/value codeing similar to apple's
+    NSObject. But for python of Course"""
+
+
+    def valueForKey(self, key):
+	attribute = getattr(self, key, None)
+
+	# todo: valueForUndefinedKey.. which means we need to use
+	# __slots__ or the EDS
+
+	if callable(attribute):
+	    results = attribute()
+	else:
+	    results = attribute
+	    
+	return attribute
+
+    def valueForKeyPath(self, keyPath):
+        """Returns the value for the specified key, relative to self"""
+
+	parts = keyPath.split('.')
+	key = parts[0]
+
+	if len(parts) == 1:
+	    subPath = ""
+	else:
+	    subPath = '.'.join(parts[1:])
+
+	obj = self.valueForKey(key)
+	if subPath:
+	    return obj.valueForKeyPath(subPath)
+	else:
+	    return obj
+
+    def setValueForKey(self, value, key):
+	if hasattr(self, "__slots__") and type(self.__slots__) == dict:
+	    # if the Object has __slots__ defined and it's a
+	    # dictionary we'll asume the value of the __slots__
+	    # dictionary should be the type the value we're setting
+	    # should be coreced to.
+	    attributeType = self.__slots__[key]
+	    if type(value) != attributeType:
+		value = attributeType(value)
+
+	setMethodName = "set%s" % key.capitalize()
+	if hasattr(self, setMethodName):
+	    getattr(self,setMethodName)(value)
+	else:
+	    # no setter, call directly
+	    setattr(self, key, value)
+
+    def setValueForKeyPath(self, value, keyPath):
+	parts = keyPath.split('.')
+	key = parts[0]
+
+	if len(parts) == 1:
+	    subPath = ""
+	else:
+	    subPath = '.'.join(parts[1:])
+
+
+	if subPath:
+	    obj = self.valueForKey(key)
+	    obj.setValueForKeyPath(value, subPath)
+	else:
+	    self.setValueForKey(value, key)
+
+
+
+class Entity(RObject):
+    """Base Class for all Entities in Rambler.
+
+    In order to run a full set of tests we need to create a fake
+    entity description service.
+    
+    >>> class Field:
+    ...   def __init__(self, type):
+    ...     self.type=type
+    >>> class EDS:
+    ...   registry={Entity:{'foo':Field(int),'child':Field(Entity)}}
+    ...   def getField(self, victim, field):
+    ...     return self.registry[victim][field]
+
+    >>> Entity.EntityDescriptionService = EDS()
+
+    We also need to find the ErrorFactory to ourselves
+    >>> from Rambler.ErrorFactory import ErrorFactory
+    >>> Entity.errorFactory = ErrorFactory('test')
+    
+    Provides methods similar to apple's key value codeing, which is
+    similar to get/setattr()
+
+    For instance
+    >>> e = Entity()
+    >>> e.setValueForKey(10, 'foo')
+    >>> e.foo
+    10
+    >>> e.valueForKey('foo')
+    10
+
+    Unlike get/setattr valueForKey allows you to specify attributes
+    across relationships.
+
+    >>> e.setValueForKey(Entity(), 'child')
+    >>> e.setValueForKey(15, 'child.foo')
+    >>> e.valueForKey('child.foo')
+    15
+    >>> e.child.foo
+    15
+
+    The above statements can be done in a single shot using setValuesForKeysWithDictionary()
+    >>> del e
+    >>> e = Entity()
+    >>> keyedValues = {'foo': 10,
+    ...                'child': Entity(),
+    ...                'child.foo': 21}
+    >>> e.setValuesForKeysWithDictionary(keyedValues)
+    >>> e.foo
+    10
+    >>> e.child.foo
+    21
+
+    If we try to set an invalid value, a ValueError will be thrown
+    with the type we were expecting on a special attribute
+    
+    >>> try:
+    ...   e.setValueForKey('bar', 'foo')
+    ... except ValueError, exc:
+    ...   exc.attempted
+    <type 'int'>
+
+    And if we call setValuesForKeysWithDictionary() that includes one
+    or more invalid values, we'll get a ciError object with each of
+    those values.
+    >>> keyedValues = {'foo': '10',
+    ...                'child': Entity(),
+    ...                'child.foo': 'bar'}
+
+    >>> try:
+    ...   e.setValuesForKeysWithDictionary(keyedValues)
+    ... except Exception, exc:
+    ...   pass
+    ...   e.errorFactory.isError(exc)
+    ...   exc.userInfo['child.foo']
+    True
+    'bar is not a valid number without decimals'
+
+    Note that we also passed the first foo as a string and it was
+    still successfully converted to an int.
+    >>> e.foo
+    10
+
+    """
+
+    # Define some error codes
+    SET_VALUE_ERROR = 0
+
+    
+    def _get_home(klass):
+        name = klass.EntityDescriptionService.getName(klass)
+        homeClass = klass.EntityDescriptionService.getHome(name)
+        # This is lame.  Scott told me to do it -F
+        return klass.EntityDescriptionService.componentRegistry.lookup(homeClass.homeId)
+    _get_home = classmethod(_get_home)
+
+
+
+
+    def setValuesForKeysWithDictionary(self, keyedValues):
+
+        # values are coming in as a dictionary, we convert them to a
+        # tuple of tuples so that they can be sorted.
+
+        # for instance we might have a dictionary like this
+        # {'name':'blah', 'primaryContact': '123-1',
+        # 'primaryContact.firstName':'John',
+        # 'primaryContact.lastName':'Cash'}
+
+        # we want to set the attributes in order, so that the
+        # primaryContact object whose pyramryKey is 123-1 is set on
+        # the top level object prior to use setting
+        # primaryContact.firstName and primaryContact.lastName.
+        
+        keyedValues = keyedValues.items()
+        keyedValues.sort()
+
+        errors = {}
+        for keyPath, value in keyedValues:
+            
+            # todo: if keypath refers to an Entity, test the value. if
+            # the value is an Entity go ahead and set it. If it's not
+            # an entity, assume it's the primaryKey, lookup the home
+            # and find the real entity.
+            try:
+                self.setValueForKeyPath(value, keyPath)
+            except Exception, e:
+                if isinstance(e, ValueError) and  hasattr(e, 'attempted'):
+                    # We got a value error, we know what type of
+                    # value we were trying to convert so we can
+                    # make a nice message
+                    if HR_TYPES.has_key(e.attempted):
+                        msg = "%s is not a valid %s" % (value, HR_TYPES[e.attempted])
+                    else:
+                        msg = "Couldn't convert %s to %s (we're really sorry this isn't more clear)" % (value, str(e.attempted))
+
+                    errors[keyPath] = msg
+                else:
+                    # We got an error we weren't expecting.
+                    errors[keyPath] = "We tried really hard (no really, we did!) to set the value to '%s', but I'm afraid we just couldn't do it.  Instead we got this unexpected error: %s" % (value, e)
+
+        if errors:
+            # Create and raise a ciError containing all the data we
+            # collected.
+            errors[self.errorFactory.REASON]      = (
+                "Entity has invalid fields."
+                )
+                
+            errors[self.errorFactory.DESCRIPTION] = (
+                "We couldn't create the entity because one or more fields cause problems that we couldn't "
+                )
+
+            errors[self.errorFactory.SUGGESTION] = (
+                "Verify the field data is correct."
+                )
+
+            err = self.errorFactory.newError(self.SET_VALUE_ERROR,
+                                             errors)
+
+            raise err
+
+        # optimization hint: if we're setting more than one attribute
+        # for a subobject, we actually end up traversing it several
+        # times with this approach. If we're looking for speed it
+        # might be possible to keep track of the objects that we've
+        # traversed over and call setValeForKey directly on them
+        # in other words do something like
+        # for keyPath, value in keyedValues:
+        #   keyPath=keyPath.split()
+        #   key = ".".join(keyPath[:-1])
+        #   attribute = keyPath[-1]
+        #   object = cahched.get(key, self.valueFor(keyPath))
+        #   object.setValueForKey(value, key)
+        #   # cache the object for the next iteration
+        #   cache[key] = object

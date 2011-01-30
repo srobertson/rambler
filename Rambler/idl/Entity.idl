@@ -1,0 +1,16 @@
+#ifndef _ENTITY_IDL_
+#define _ENTITY_IDL_
+
+#include "EPOHome.idl"
+
+module epo {
+  interface EPOHome;
+  
+  interface Entity
+  {
+    readonly attribute EPOHome home;
+  };
+
+};
+
+#endif

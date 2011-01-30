@@ -1,0 +1,21 @@
+#ifndef _CIICLIENTCALLBACK_IDL_
+#define _CIICLIENTCALLBACK_IDL_
+
+module epo{
+interface ciIClientCallback
+/*
+
+  Provides callback methods so the server can notify the client of
+  certain events.
+
+ */
+{
+  void onLogout(in string message);
+  void onShutdown(in unsigned short seconds);
+  void displayMessage(in string message);
+  void ping();
+
+};
+};
+
+#endif

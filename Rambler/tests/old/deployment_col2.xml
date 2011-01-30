@@ -1,0 +1,22 @@
+<!-- This creates fk_doodle on the widget table. -->
+
+<relationships>
+  <ejb-relation>
+    <ejb-relation-name>widget_doodle</ejb-relation-name>
+    <foreign-key-mapping/>
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role1</ejb-relationship-role-name>
+        <key-fields>
+           <key-field>
+            <field-name>primaryKey</field-name>
+            <column-name>fk_widget</column-name>
+          </key-field>
+        </key-fields>
+   </ejb-relationship-role>
+
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role2</ejb-relationship-role-name>
+        <key-fields/>
+    </ejb-relationship-role>
+  </ejb-relation>
+</relationships>

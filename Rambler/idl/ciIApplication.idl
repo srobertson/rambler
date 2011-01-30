@@ -1,0 +1,10 @@
+#ifndef _CIIAPPLICATION_IDL_
+#define _CIIAPPLICATION_IDL_
+
+module epo{
+  interface ciIApplication {
+    void shutdown();
+    void noOp();
+  };
+};
+#endif

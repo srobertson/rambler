@@ -1,0 +1,181 @@
+<?xml version="1.0"?>
+<!--DOCTYPE ejb-jar 
+PUBLIC "-//Sun Microsystems, Inc.//DTD Enterprise JavaBeans 2.0//EN" 
+"http://java.sun.com/dtd/ejb-jar_2_0.dtd"-->
+
+<ejb-jar>
+
+ <entity>
+   <display-name>Widget</display-name>
+   <ejb-name>Widget</ejb-name>
+   <home>Rambler.tests.Widget.WidgetHome</home>
+   <remote>_GlobalIDL.Widget</remote>
+   <ejb-class>Rambler.tests.Widget.Widget</ejb-class>
+   <persistence-type>Container</persistence-type>
+   <reentrant>True</reentrant>
+   <cmp-version>2.x</cmp-version>
+   <abstract-schema-name>Widget</abstract-schema-name>
+   <primkey-field>primaryKey</primkey-field>
+   <prim-key-class>str</prim-key-class>
+   <cmp-field>
+     <field-name>primaryKey</field-name>
+     <field-type>str</field-type>
+   </cmp-field>
+   <cmp-field>
+     <field-name>wedgie</field-name>
+     <field-type>int</field-type>
+   </cmp-field>
+   <cmp-field>
+     <field-name>name</field-name>
+     <field-type>str</field-type>
+   </cmp-field>
+ </entity>
+
+ <entity>
+   <display-name>Doodle</display-name>
+   <ejb-name>Doodle</ejb-name>
+   <home>Rambler.tests.Doodle.DoodleHome</home>
+   <remote>_GlobalIDL.Doodle</remote>
+   <ejb-class>Rambler.tests.Doodle.Doodle</ejb-class>
+   <persistence-type>Container</persistence-type>
+   <reentrant>True</reentrant>
+   <cmp-version>2.x</cmp-version>
+   <abstract-schema-name>Doodle</abstract-schema-name>
+   <primkey-field>primaryKey</primkey-field>
+   <prim-key-class>str</prim-key-class>
+   <cmp-field>
+     <field-name>primaryKey</field-name>
+     <field-type>str</field-type>
+   </cmp-field>
+   <cmp-field>
+     <field-name>wedgie</field-name>
+     <field-type>int</field-type>
+   </cmp-field>
+   <cmp-field>
+     <field-name>name</field-name>
+     <field-type>str</field-type>
+   </cmp-field>
+ </entity>
+
+<relationships>
+ <ejb-relation>
+   <description>
+     Each user has 0 or more leads, and every lead has
+     one user (assignedTo).
+    </description>
+  <ejb-relation-name>relation</ejb-relation-name>
+   <ejb-relationship-role>
+    <multiplicity>One</multiplicity>
+    <relationship-role-source>
+     <ejb-name>Widget</ejb-name>
+    </relationship-role-source>
+    <cmr-field>
+     <cmr-field-name>other2</cmr-field-name>
+    </cmr-field>
+   </ejb-relationship-role>
+   <ejb-relationship-role>
+    <multiplicity>One</multiplicity>
+    <relationship-role-source>
+     <ejb-name>Widget</ejb-name>
+    </relationship-role-source>
+    <cmr-field>
+     <cmr-field-name>other1</cmr-field-name>
+    </cmr-field>
+   </ejb-relationship-role>
+ </ejb-relation>
+
+ <ejb-relation>
+   <description>
+     Each user has 0 or more leads, and every lead has
+     one user (assignedTo).
+    </description>
+   <ejb-relation-name>many_test</ejb-relation-name>
+   <ejb-relationship-role>
+    <multiplicity>One</multiplicity>
+    <relationship-role-source>
+     <ejb-name>Widget</ejb-name>
+    </relationship-role-source>
+    <cmr-field>
+     <cmr-field-name>children</cmr-field-name>
+    </cmr-field>
+   </ejb-relationship-role>
+   <ejb-relationship-role>
+    <multiplicity>Many</multiplicity>
+    <relationship-role-source>
+     <ejb-name>Widget</ejb-name>
+    </relationship-role-source>
+    <cmr-field>
+     <cmr-field-name>parent</cmr-field-name>
+    </cmr-field>
+   </ejb-relationship-role>
+ </ejb-relation>
+
+ <ejb-relation>
+   <description>
+     Each user has 0 or more leads, and every lead has
+     one user (assignedTo).
+    </description>
+  <ejb-relation-name>widget_doodle</ejb-relation-name>
+   <ejb-relationship-role>
+    <multiplicity>One</multiplicity>
+    <relationship-role-source>
+     <ejb-name>Widget</ejb-name>
+    </relationship-role-source>
+    <cmr-field>
+     <cmr-field-name>doodle</cmr-field-name>
+    </cmr-field>
+   </ejb-relationship-role>
+   <ejb-relationship-role>
+    <multiplicity>One</multiplicity>
+    <relationship-role-source>
+     <ejb-name>Doodle</ejb-name>
+    </relationship-role-source>
+   </ejb-relationship-role>
+ </ejb-relation>
+
+
+ <ejb-relation>
+   <description>
+   </description>
+  <ejb-relation-name>widgets_doodles</ejb-relation-name>
+   <ejb-relationship-role>
+    <multiplicity>Many</multiplicity>
+    <relationship-role-source>
+     <ejb-name>Widget</ejb-name>
+    </relationship-role-source>
+    <cmr-field>
+     <cmr-field-name>doodles</cmr-field-name>
+    </cmr-field>
+   </ejb-relationship-role>
+   <ejb-relationship-role>
+    <multiplicity>Many</multiplicity>
+
+    <relationship-role-source>
+     <ejb-name>Doodle</ejb-name>
+    </relationship-role-source>
+    <cmr-field>
+     <cmr-field-name>widgets</cmr-field-name>
+    </cmr-field>
+   </ejb-relationship-role>
+ </ejb-relation>
+</relationships>
+
+
+
+<assembly-descriptor>
+  <container-transaction>
+    <method>
+      <ejb-name>Widget</ejb-name>
+      <method-name>*</method-name>
+    </method>
+    <trans-attribute>RequiresNew</trans-attribute>
+  </container-transaction>
+  <container-transaction>
+    <method>
+      <ejb-name>Widget</ejb-name>
+      <method-name>wedgie</method-name>
+    </method>
+    <trans-attribute>Required</trans-attribute>
+  </container-transaction>
+</assembly-descriptor>
+</ejb-jar> 

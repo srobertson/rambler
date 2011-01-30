@@ -1,0 +1,26 @@
+#ifndef _CIICONFIGSERVICE_IDL_
+#define _CIICONFIGSERVICE_IDL_
+
+module epo {
+  exception NoSectionError {string reason;};
+  exception NoOptionError {string reason;};
+  
+  typedef sequence<string> stringList;
+  
+  interface ciIConfigService
+  {
+    string get(in string section, in string option)
+      raises(NoSectionError, NoOptionError);
+    unsigned short getint(in string section, in string option)
+      raises(NoSectionError, NoOptionError);
+    stringList getList(in string section, in string option)
+      raises(NoSectionError, NoOptionError);
+    
+    void set(in string section, in string option, in string value);
+    void setList(in string section, in string option, in stringList value);
+  };
+};
+  
+#endif
+
+

@@ -1,0 +1,12 @@
+#ifndef _MONEY_IDL_
+#define _MONEY_IDL_
+
+module epo {
+  struct Money {
+    float amount;
+    string currencyCode;
+    boolean isNone;
+  };
+};
+
+#endif

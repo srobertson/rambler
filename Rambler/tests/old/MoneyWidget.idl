@@ -1,0 +1,19 @@
+#ifndef _MONEYWIDGET_IDL
+#define _MONEYWIDGET_IDL
+
+#include "epo.idl"
+
+interface MoneyWidget : epo::Entity
+{
+    readonly attribute octetKey primaryKey;
+    attribute epo::Money money;
+};
+
+interface MoneyWidgetHome : epo::EPOHome
+{
+    MoneyWidget create(in epo::Money mwMoney);
+    MoneyWidget findByPrimaryKey(in string primaryKey)
+        raises (epo::FinderException);
+};
+
+#endif

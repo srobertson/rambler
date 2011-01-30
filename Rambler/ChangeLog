@@ -1,0 +1,18 @@
+Sat Apr 30 2005 Scott Robertson <srobertson@codeit.com> - 0.12.4
+	* Distribute Rambler's idl files to /usr/share/idl/Rambler
+	
+Tues Feb 8 2005 Scott Robertson <srobertson@codeit.com> - 0.12.0
+
+	* Rambler.client() now accepts an additional keyword argument
+	callBack, which can be passed to the server at login.
+	
+Thur Feb 3 2005 Scott Robertson <srobertson@codeit.com> - 0.11.0
+
+	* Recordset.fetchMany() now returns any  instead of a list
+	of anys. This should cut network traffic dramatically, since 
+	the old method marshaled the typeCode for every row onto the wire. 
+	In one drasctic case we sent out 10MB of data on the network to 
+	transfer 1MB of data.
+	
+	
+	

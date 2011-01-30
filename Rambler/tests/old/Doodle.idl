@@ -1,0 +1,6 @@
+#ifndef _DOODLE_IDL
+#define _DOODLE_IDL
+
+#include "epo.idl"
+
+#endif

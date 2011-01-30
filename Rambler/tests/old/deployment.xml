@@ -1,0 +1,120 @@
+<deployment>
+<relationships>
+  <ejb-relation>
+    <ejb-relation-name>relation</ejb-relation-name>
+    <foreign-key-mapping />
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role1</ejb-relationship-role-name>
+        <key-fields>
+          <key-field>
+            <field-name>primaryKey</field-name>
+            <column-name>fk_widget0</column-name>
+          </key-field>
+        </key-fields>
+    </ejb-relationship-role>
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role2</ejb-relationship-role-name>
+        <key-fields>
+          <key-field>
+            <field-name>primaryKey</field-name>
+            <column-name>fk_widget1</column-name>
+          </key-field>
+        </key-fields>
+    </ejb-relationship-role>
+  </ejb-relation>
+
+  <ejb-relation>
+    <ejb-relation-name>many_test</ejb-relation-name>
+    <foreign-key-mapping />
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role1</ejb-relationship-role-name>
+        <key-fields>
+          <key-field>
+            <field-name>primaryKey</field-name>
+            <column-name>fk_parent</column-name>
+          </key-field>
+        </key-fields>
+    </ejb-relationship-role>
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role2</ejb-relationship-role-name>
+      <key-fields />
+    </ejb-relationship-role>
+  </ejb-relation>
+
+  <ejb-relation>
+    <ejb-relation-name>widget_doodle</ejb-relation-name>
+    <relation-table-mapping>
+      <table-name>relation_widget_doodle</table-name>
+    </relation-table-mapping>
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role1</ejb-relationship-role-name>
+        <key-fields>
+          <key-field>
+            <field-name>primaryKey</field-name>
+            <column-name>role1</column-name>
+          </key-field>
+        </key-fields>
+    </ejb-relationship-role>
+
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role2</ejb-relationship-role-name>
+        <key-fields>
+          <key-field>
+            <field-name>primaryKey</field-name>
+            <column-name>role2</column-name>
+          </key-field>
+        </key-fields>
+    </ejb-relationship-role>
+  </ejb-relation>
+
+
+  <ejb-relation>
+    <ejb-relation-name>widgets_doodles</ejb-relation-name>
+    <relation-table-mapping>
+      <table-name>relation_widgets_doodles</table-name>
+    </relation-table-mapping>
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role1</ejb-relationship-role-name>
+        <key-fields>
+          <key-field>
+            <field-name>primaryKey</field-name>
+            <column-name>role1</column-name>
+          </key-field>
+        </key-fields>
+    </ejb-relationship-role>
+    <ejb-relationship-role>
+      <ejb-relationship-role-name>role2</ejb-relationship-role-name>
+        <key-fields>
+          <key-field>
+            <field-name>primaryKey</field-name>
+            <column-name>role2</column-name>
+          </key-field>
+        </key-fields>
+    </ejb-relationship-role>
+  </ejb-relation>
+
+</relationships>
+
+<entity-indexes>
+  <entity>
+    <ejb-name>widget</ejb-name>
+    <indexes>
+      <index>
+        <column>name</column>
+      </index>
+    </indexes>
+  </entity>
+  <entity>
+    <ejb-name>widget</ejb-name>
+    <table-name>widget</table-name>
+    <indexes>
+      <index>
+        <column>name</column>
+        <column>wedgie</column>
+        <unique/>
+      </index>
+    </indexes>
+  </entity>
+
+</entity-indexes>
+</deployment>

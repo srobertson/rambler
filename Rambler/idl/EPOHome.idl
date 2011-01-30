@@ -1,0 +1,42 @@
+#ifndef _EPOHOME_IDL_
+#define _EPOHOME_IDL_
+
+#include "Entity.idl"
+#include "SimpleEnumerator.idl"
+#include "epo.idl"
+
+module epo {
+  interface HomeObserver;
+  interface Entity;
+  interface SimpleEnumerator;
+
+  exception FinderException {string reason;};
+  exception CreateException {string reason;};
+
+  interface EPOHome
+  {
+    readonly attribute string homeId;
+    void remove(in Entity entity_);
+    void save(in Entity entity_);
+
+    void addObserver(in HomeObserver observer);
+    void removeObserver(in HomeObserver observer);
+
+    SimpleEnumerator getAll();
+    /* get_lastUpdate returns the last update to this entity home 
+    so that clients can see when the servers cache has changed */
+    float get_lastUpdate();
+
+    void notifyUpdate(in Entity entity_);
+  } ;
+
+  interface HomeObserver
+  {
+    void OnCreate(in EntityInfo entity_);
+    void OnUpdate(in EntityInfo entity_);
+    void OnRemove(in EntityInfo entity_);
+
+  };
+};
+
+#endif

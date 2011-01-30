@@ -1,0 +1,49 @@
+#ifndef _WIDGET_IDL
+#define _WIDGET_IDL
+
+#include "epo.idl"
+
+interface Widget : epo::Entity
+{
+    readonly attribute octetKey primaryKey;
+    attribute unsigned short wedgie;
+  attribute string name;
+  attribute Widget other1;
+  attribute Widget other2;
+  attribute Widget parent;
+  readonly attribute epo::SimpleEnumerator children;
+};
+
+interface WidgetHome : epo::EPOHome
+{
+    Widget create();
+    Widget findByPrimaryKey(in string primaryKey)
+        raises (epo::FinderException);
+};
+
+interface Doodle : epo::Entity
+{
+    readonly attribute octetKey primaryKey;
+    attribute unsigned short wedgie;
+};
+
+interface DoodleHome : epo::EPOHome
+{
+    Doodle create();
+    Doodle findByPrimaryKey(in string primaryKey)
+        raises (epo::FinderException);
+};
+
+interface Thingy : epo::Entity
+{
+    readonly attribute octetKey primaryKey;
+    attribute unsigned short wedgie;
+};
+
+interface ThingyHome : epo::EPOHome
+{
+    Thingy create();
+    Thingy findByPrimaryKey(in string primaryKey)
+        raises (epo::FinderException);
+};
+#endif

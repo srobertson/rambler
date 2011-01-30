@@ -1,0 +1,17 @@
+Needed optimizaitons:
+
+Every corba request on an entity creates a brand new
+entityServantClass in order to service the single request. It might be
+more efficient to keep the entityServantClass around for awhile, maybe
+in an LRU in case that it's need again. This would also avoid extra
+look-ups in the database. Concurrency issues will need to be thought
+about. 
+
+
+The interfaces on entities are very fine grained, we need to implement
+some course grain interfaces to reduce network trafic problems.
+
+
+The IdentityManager needs to be moved from itbe to Rambler, since the
+next step is to have the Locators consult the Identity manager before
+invoking methods on objects.

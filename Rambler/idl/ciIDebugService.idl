@@ -1,0 +1,19 @@
+#ifndef _CIIDEBUGSERVICE_IDL_
+#define _CIIDEBUGSERVICE_IDL_
+
+#include "epo.idl"
+
+module epo{
+  interface ciIDebugService
+  {
+    string refcount(in unsigned short count );
+    string get_referrers(in string obj );
+    string getThreadStates();
+    string getThreadStackTrace(in long threadId);
+    string checkRelations();
+    string enableProfiler(in boolean state);
+
+  };
+};
+
+#endif

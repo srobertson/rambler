@@ -1,0 +1,18 @@
+#ifndef _CIIPROFILESERVICE_IDL_
+#define _CIIPROFILESERVICE_IDL_
+
+#include "epo.idl"
+
+module epo {
+    interface ciIProfileService
+    {
+      string enableProfiler(in boolean state);
+      string showTransactions();
+      string showRemoteCalls(in unsigned short txnId);
+
+      string showStatsForMethod(in unsigned short txnId, 
+                    in unsigned short methodNum);
+    };
+};
+
+#endif
