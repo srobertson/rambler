@@ -8,6 +8,6 @@ setup(
     author_email='srobertson@codeit.com',
     #package_dir = {'': 'src'},
     packages = ['Rambler'],
-    install_requires = ['zope.interface','dateutil']
+    install_requires = ['zope.interface','dateutils']
     #test_suite = 'your.module.tests',
 )
