@@ -8,6 +8,12 @@ setup(
     author_email='srobertson@codeit.com',
     #package_dir = {'': 'src'},
     packages = ['Rambler','Rambler.controllers'],
-    install_requires = ['zope.interface','dateutils']
-    #test_suite = 'your.module.tests',
+    install_requires = ['zope.interface','dateutils'],
+    
+    entry_points={
+              'console_scripts': [
+                  'ramblerapp = Rambler.Application:main',
+                  ]
+                }
+
 )
