@@ -8,7 +8,7 @@ setup(
     author_email='srobertson@codeit.com',
     #package_dir = {'': 'src'},
     packages = ['Rambler','Rambler.controllers'],
-    install_requires = ['zope.interface','dateutils'],
+    install_requires = ['zope.interface','python-dateutils==1.5'],
     
     entry_points={
               'console_scripts': [
