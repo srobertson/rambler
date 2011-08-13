@@ -275,9 +275,12 @@ class option(object):
   last_warning  = None
   warn_interval = relativedelta(minutes=5)
     
+  # TODO: get rid of section
   def __init__(self, section, option, default=_noDefaultMarker):
-   
-    self.option  = ("%s.%s") % (section,option)
+    if option:
+      self.option  = ("%s.%s") % (section,option)
+    else:
+      self.option = section
     self.default = default
       
     # ensure the class has a ConfigService outlet
@@ -431,6 +434,9 @@ def load_classes(module_or_package_name, base_class):
       # blab about import errors other than no module named
       print "Error importing %s: %s" % (module_or_package_name, e)
     return []
+  except ValueError:
+    import pdb; pdb.set_trace()
+    pass
     
   classes = set()
   for module in modules:

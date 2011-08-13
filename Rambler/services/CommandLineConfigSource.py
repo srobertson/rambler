@@ -1,35 +1,59 @@
 import os
-from optparse import OptionParser
+import sys
+import json
   
 
 from Rambler import outlet
 
-class RamblerOptions(OptionParser):
-  def error(self, msg):
-    if not msg.startswith('no such option'):
-      super(RamblerOptions, self).error(msg)
 
 class CommandLineConfigSource(object):
+  """Treats the commandline as a config source.
+  
+  Options can be overidden like so
+  -<option> value
+  
+  Example:
+  $ ramblerapp <app> -once true
+
+  Would set the key 'once' to the value of true
+  
+  Values are parsed using the json module.
+  """
   configService = outlet('ConfigService')
   
   def assembled(self):
-    
-    parser = RamblerOptions()
-    parser.add_option("-o", action="append", dest="options",
-                      default=[], help='Set extension option -o "section:key=value"')
-    (options, args) = parser.parse_args()
     self.data = {}
-    for option in options.options:
-      key, value = option.split('=',1)
+    
+    if sys.argv[0].endswith('ramblerapp'):
+      argv = sys.argv[2:]
+    else:
+      argv = sys.argv[1:]
+      
+    while argv:
+      token = argv.pop(0)
+      if token.startswith('-'):
+        key = token[1:]
+        try:
+          value = argv.pop(0)
+        except IndexError:
+          value = None
+      elif token.startswith('--'):
+        key = token[2:]
+        value = argv.pop(0)
+      else:
+        if 'application.args' not in self.data:
+          self.data['application.args'] = []
+        self.data['application.args'].append(token)
+        continue
+        
+      try:
+        value = json.loads(value)
+      except (ValueError, TypeError):
+        pass
       self.data[key] = value
+    
 
     self.configService.addConfigSource(self)
     
   def get(self, option):
-    val = self.data[option]
-    # TODO: create a way to specify in the config service
-    if val.lower() == 'false':
-      val = False
-    elif val.lower() == 'true':
-      val = True
-    return val
+    return self.data[option]

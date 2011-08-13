@@ -64,6 +64,8 @@ class TestCase(unittest.TestCase):
   
   _fixtures = {}
   
+  app_dir = None
+  
   
   def setUp(self):    
     os.environ['RAMBLER_ENV'] = 'test'
@@ -79,7 +81,12 @@ class TestCase(unittest.TestCase):
     extensions = set(self.extra_extensions)
     
     # Locate the extension dir
-    app_dir = os.path.dirname(sys.modules[self.__class__.__module__].__file__)
+
+    if self.app_dir:
+      app_dir = self.app_dir + '/'
+    else:
+      app_dir = os.path.dirname(sys.modules[self.__class__.__module__].__file__)
+
     ext_dir = ''
     while app_dir != '/':
       app_dir = os.path.dirname(app_dir)
@@ -109,7 +116,7 @@ class TestCase(unittest.TestCase):
     
     compReg.addComponent('EventService', self.eventChannel)
     ls = LogService()
-    
+
     log_dir = os.path.join(app_dir, 'log')
     log_path = os.path.join(log_dir, 'test.log')
     try:

@@ -14,7 +14,9 @@ from Rambler.ServiceRegistry import ServiceRegistry
 from Rambler.SessionRegistry import SessionRegistry
 from Rambler.SessionHandler import SessionHandler
 from Rambler.LoggingExtensions  import LogService
-from Rambler.MessageBus import MessageBus, IMessageObserver
+
+
+
 from Rambler.twistedlogging import  StdioOnnaStick
 from Rambler.defer import Deferred
 
@@ -70,7 +72,7 @@ class AppErrDuringLoad(Exception):
 
 
 class Application(object):
-    implements(IMessageObserver)
+
 
     eventChannel = outlet('EventService')
     componentRegistry = outlet('ComponentRegistry')
@@ -79,7 +81,7 @@ class Application(object):
     txnDescriptionService = outlet('TXNDescriptionService')
     log = outlet('LogService')
     timerService = outlet('TimerService')
-    msgBus = outlet('MessageBusService')
+
 
 
     MISCONFIGURED = 0  # Config file can not be interpreted
@@ -99,13 +101,11 @@ class Application(object):
     CONFIG_MODIFIED   = 1
     CONFIG_MISSING    = 2
 
-    # the name on the bus we send life cycle message to
-    CONTROLLER_REF="com.codeit.rambler.controller"
     
 
     __slots__ = ['name', 'config','appDir', 'pidPath', 'configFile', 'context',
                  'status', 'configError', 'digest',
-                 'controllerAddress', 'deferred', '_dh',
+                 'deferred', '_dh',
                  'appBundle','mainRunLoop',
                  ]
 
@@ -113,11 +113,10 @@ class Application(object):
 
     ## Instance Methods ##
 
-    def __init__(self, appDir, controllerAddress = "", authoritativeOptions = None, **defaultComps):
+    def __init__(self, appDir,  authoritativeOptions = None, **defaultComps):
         self.appBundle = Bundle(appDir)
         self.configFile = self.appBundle.pathForResource('app.conf')
         self.status = Application.STOPPED
-        self.controllerAddress = controllerAddress
 
         self.digest = ""
         self.name = os.path.basename(os.path.abspath(appDir))
@@ -155,16 +154,12 @@ class Application(object):
         defaultComps["RunLoop"] = RunLoop
         defaultComps["PortFactory"] = Port
 
-	# our os signal handling, has to be as light weight as
-	# possible. so any signal this app receives will be processed
-	# by the sameRunLoop that started this app (hopefully you
-	# don't have it bogged down running long synchronous tasks)
+        # our os signal handling, has to be as light weight as
+        # possible. so any signal this app receives will be processed
+        # by the sameRunLoop that started this app (hopefully you
+        # don't have it bogged down running long synchronous tasks)
 
-	self.mainRunLoop = RunLoop.currentRunLoop()
-
-        if not defaultComps.has_key("MessageBusService"):
-            defaultComps["MessageBusService"] = MessageBus()
-
+        self.mainRunLoop = RunLoop.currentRunLoop()
 
         self.componentRegistry = CompBinder()
         for compName, component in defaultComps.items():
@@ -186,25 +181,21 @@ class Application(object):
         for option, value in authoritativeOptions.items():
           configService.set_default(option, value)
 
-	try: # todo, remove this crap afte we pull the last bits of corba/omniorb from Rambler
-	    from epo import ciIApplication, ciIConfigService
-	    # Register the application service so that we can be remotely managed
-	    serviceRegistry.addService("Application", self, ciIApplication, [])
-	    serviceRegistry.addService("ConfigService", configService, ciIConfigService, [])
-	except ImportError:
-	    # corba isn't installed
-	    serviceRegistry.addService("Application", self, None, [])
+        try: # todo, remove this crap afte we pull the last bits of corba/omniorb from Rambler
+            from epo import ciIApplication, ciIConfigService
+            # Register the application service so that we can be remotely managed
+            serviceRegistry.addService("Application", self, ciIApplication, [])
+            serviceRegistry.addService("ConfigService", configService, ciIConfigService, [])
+        except ImportError:
+            # corba isn't installed
+            serviceRegistry.addService("Application", self, None, [])
             # Note: ConfigService is placed into the componentRegistry
             # via the service registry. Not sure why I did this.
-	    serviceRegistry.addService("ConfigService", configService, None, [])
+            serviceRegistry.addService("ConfigService", configService, None, [])
 
 
 
         self.componentRegistry.bind()
-
-    def _get_msgBusName(self):
-        return "com.codeit.rambler.app." + self.name
-    msgBusName = property(_get_msgBusName)
 
 
     def loadConfig(self):
@@ -224,14 +215,6 @@ class Application(object):
                 
         self.configError = ""
         self.config = AppConfig.parse(self.configFile)
-
-
-    def claimName(self, name, obj):
-        # register an object on either the local or remote bus
-        self.msgBus.claimName(name, obj)
-
-    def sendMessage(self, toObjectOrRef, subject, *args, **kw):
-        return self.msgBus.sendMessage(toObjectOrRef, subject, *args, **kw)
     
 
     def getConfigStatus(self):
@@ -278,30 +261,15 @@ class Application(object):
         old=signal.signal(signal.SIGTERM, self.sighandler )
         #signal.signal(signal.SIGCHLD, self.onSigChild)
         signal.signal(signal.SIGHUP, self.onSigHUP)
-	# todo: it wolud be nice if we restored theses signals when
-	# the App is done.
+        # todo: it wolud be nice if we restored theses signals when
+        # the App is done.
 
 
         # This won't fully assemble the App, that doesn't happen until
         # we load the core descriptor. But we should have just enough
         # to log and send LCP messages
 
-        if self.controllerAddress:
-
-            # if we have a controller we need to delay STARTING until
-            # our MessageBus connects to the the message bus on the
-            # other end
-            
-
-            # If we're told to communicate our state to a appManager,
-            # retry every 30 seconds to connect if we get an error.
-            
-            deferred = self.msgBus.connect(self.controllerAddress, timeout=0, delay=random.random())
-            deferred.addCallback(self.onConnect)
-            
-
-        else:
-            RunLoop.currentRunLoop().waitBeforeCalling(0, self.setStatus, Application.STARTING)
+        RunLoop.currentRunLoop().waitBeforeCalling(0, self.setStatus, Application.STARTING)
 
         return self.deferred
                 
@@ -483,30 +451,7 @@ class Application(object):
 
     def setStatus(self, status, details=None):
         """Sends a life cycle notification to the controlling process, if any."""
-
-        
-        if self.msgBus.mode == self.msgBus.MODE_CONNECTED:
-
-            # if we have a controller address, send our status
-            # notification, to it and wait for the LCP to call either
-            # onStatusSent() or onStatusError()
-            deferred = self.msgBus.sendMessage(self.CONTROLLER_REF, status, self.name, details)
-            deferred.addCallback(self.onStatusSent, status)
-            deferred.addErrback(self.onStatusError, status) 
-        else:
-            # we don't have a controller so we pretend we heard
-            # acknowledgements from it.
-            self.onStatusSent(None, status)
-
-    def reattach(self):
-        if self.controllerAddress and self.msgBus.mode != self.msgBus.MODE_CONNECTED:
-            # we were started controlled, but looks like the
-            # controller went away and now is asking to reestablish
-            # connection
-            
-            deferred = self.msgBus.connect(self.controllerAddress, timeout=0, delay=random.random())
-            deferred.addCallback(self.onReconnect)
-            
+        self.onStatusSent(None, status)
 
 
     def switchUser(self):
@@ -573,43 +518,18 @@ class Application(object):
     # ASYNC event listeners
 
     def sighandler(self, signum, frame):
-	# important! signal handlers can be called at any time
-	# inbetween any python instruction. we have to take great
-	# pains to ensure that no locks are aquired by a signal
-	# handler or we'll dead lock. That's why we wrap this shutdown
-	# call in an extra callFromThread even though self.shutdown()
-	# does the same thing. Reason for this is I believe the python
-	# logging module uses locks, so we don't want to try acquiring
-	# one of those while this is running. If someone knows whether
-	# logging is signal safe, we could relax this and just call
-	# self.shutdown()
+        # important! signal handlers can be called at any time
+        # inbetween any python instruction. we have to take great
+        # pains to ensure that no locks are aquired by a signal
+        # handler or we'll dead lock. That's why we wrap this shutdown
+        # call in an extra callFromThread even though self.shutdown()
+        # does the same thing. Reason for this is I believe the python
+        # logging module uses locks, so we don't want to try acquiring
+        # one of those while this is running. If someone knows whether
+        # logging is signal safe, we could relax this and just call
+        # self.shutdown()
 
         self.mainRunLoop.callFromThread(self.shutdown)
-
-
-    # sigh, the message bus isn't smart enough to attempt resending
-    # messages that we're queued for a foreign bus if an error was
-    # encountered during connect, therefore we have to wait until
-    # connect suceeds before we attempt to claimName and the same
-    # thing goes for sending the first message.
-
-    def onConnect(self, address):
-        # connect succeeded, claim the name, when that succeeds, send our status
-        deferred = self.msgBus.claimName(self.msgBusName, self)
-            
-        deferred.addCallback(lambda name: self.setStatus(Application.STARTING))
-        deferred.addErrback(lambda failure: failure.printTraceback())
-
-    def onReconnect(self, address):
-        # make sure we reclaim our name
-        deferred = self.msgBus.claimName(self.msgBusName, self)
-        
-        # send the message, don't wait for a response (which is what
-        # we do in self.setStatus called from onConnect)
-        
-        deferred.addCallback(lambda name: self.sendMessage(self.CONTROLLER_REF,
-                             Application.STARTED, self.name, None))
-
 
     def onSigChild(self, signum, frame):
         self.mainRunLoop.callFromThread(self.reapChildren)
@@ -621,13 +541,14 @@ class Application(object):
             try:
                 os.waitpid(0,0)
             except OSError, e:
-		if e.errno == 10:
-		    break
-		else:
-		    raise
+                if e.errno == 10:
+                    break
+                else:
+                    raise
 
     def onSigHUP(self, signum, frame):
-        self.mainRunLoop.callFromThread(self.reattach)
+      pass
+      #self.mainRunLoop.callFromThread(self.reattach)
 
 
     def onMessage(self, context, subject):
@@ -697,7 +618,7 @@ def main():
     parser = OptionParser()
 
     parser.add_option("-d", dest="daemonize", action="store_true", default=False,
-		      help="Run this process as a background daemon")
+                      help="Run this process as a background daemon")
     parser.add_option("-v", dest="logLevel",  action="count", default=0,
                       help="Increase logging verbosity by one for each -v specified on the commandline")
 
@@ -721,42 +642,41 @@ def main():
     # that might make development eaiser
 
     scriptname = os.path.basename(sys.argv[0])
-    controllerAddress=""
     appBundlePath=None
     if scriptname != "ramblerapp":
 
 
-	# Depending on what platform we're on the scriptname could
-	# either either foo or foo.exe, to add insult too injury the
-	# scrip probably isn't installed in the bundle directory (the
-	# directory containg the app.conf) file. So using setuptools
-	# we'll first determine which egg this script came from, then
-	# we'll use that to find the directory containing the app.conf
+        # Depending on what platform we're on the scriptname could
+        # either either foo or foo.exe, to add insult too injury the
+        # scrip probably isn't installed in the bundle directory (the
+        # directory containg the app.conf) file. So using setuptools
+        # we'll first determine which egg this script came from, then
+        # we'll use that to find the directory containing the app.conf
 
         # We may have more than one module that uses the same
         # appBundle, like appmanager and ramblercon, so consolt the
         # pkg_resources for that information. This only works if the script
         # wass installed as an egg 'console_script'
 
-	for ep in pkg_resources.iter_entry_points('console_scripts',scriptname):
+        for ep in pkg_resources.iter_entry_points('console_scripts',scriptname):
              
-	    # Note, asking for the '' filename only works on unzipped
-	    # packages. If I want to make ramblerapps out of eggs
-	    # we'll need to redesign the "Bundle" concept. Heck we
-	    # might be able to ditch Bundles in favor of eggs
-	    # alltogether....
+            # Note, asking for the '' filename only works on unzipped
+            # packages. If I want to make ramblerapps out of eggs
+            # we'll need to redesign the "Bundle" concept. Heck we
+            # might be able to ditch Bundles in favor of eggs
+            # alltogether....
 
             # We may one or more scripts that 
 
 
-	    appBundlePath = pkg_resources.resource_filename(ep.dist.project_name,'')
+            appBundlePath = pkg_resources.resource_filename(ep.dist.project_name,'')
 
-	    # Warning: There could be more than one script of the same
-	    # name in setuptools database. Typically this means that
-	    # two different projects installed the same console_script
-	    # with the same name. Now the bad part is, who knows which
-	    # script is actually installed.
-	    break
+            # Warning: There could be more than one script of the same
+            # name in setuptools database. Typically this means that
+            # two different projects installed the same console_script
+            # with the same name. Now the bad part is, who knows which
+            # script is actually installed.
+            break
 
         # if appBundlePath wasn't set, then the script name didn't
         # refer to a script installed by an egg. As a last ditch
@@ -771,12 +691,7 @@ def main():
         return 1
     else:
         appBundlePath = args[0]
-
-        if len(args) > 1:
-            controllerAddress = args[1]
-            args = args[2:]
-        else:
-            args = args[1:]
+        args = args[1:]
                     
         
 
@@ -791,15 +706,6 @@ def main():
 
 
     
-    # build a list of option for the ConfigService that we're specified on the commandline
-
-#    if options.options:
-#        authoritativeOptions = {}
-#        for option in options.options:
-#            key, value = option.split("=",1)
-#            authoritativeOptions[key] = value
-#
-#    else:
     authoritativeOptions = None
 
 
@@ -827,7 +733,6 @@ def main():
             pass
 
     app = Application(appBundlePath,
-                      controllerAddress,
                       authoritativeOptions=authoritativeOptions)
   
     logService = app.lookup("LogService")
@@ -852,10 +757,10 @@ def main():
         return 1
 
     try:
-	RunLoop.currentRunLoop().run()
+        RunLoop.currentRunLoop().run()
     except:
-	app.log.exception("Unhandled exception encuntered in runLoop")
-	return 255
+        app.log.exception("Unhandled exception encuntered in runLoop")
+        return 255
     
     # if we didn't die with an exception, exit with a 0, no errors
     return 0
