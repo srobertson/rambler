@@ -145,6 +145,7 @@ class Task(object):
     self.process_id = None
     self.environment = os.environ
     self.launch_path = None
+    self._current_directory = None
     self.delegate = None
     self._rc = None
     self.descriptors = set()
@@ -192,6 +193,13 @@ class Task(object):
       self.stderr.read(self.byte_size)
       
  
+  @property
+  def current_directory(self):
+    return self._current_directory or os.getcwd()
+    
+  @current_directory.setter
+  def current_directory(self, path):
+    self._current_directory = path
     
   def terminate(self):
     """Kill the process prematuraly"""
@@ -283,6 +291,7 @@ class Task(object):
     process running. Not good.    
     """
     try:
+      os.chdir(self.current_directory)
       # Close handles not used by the child
       self.stdin.close()
       self.stdout.close()
