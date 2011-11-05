@@ -387,7 +387,6 @@ class CompBinder(object):
             self.log.debug('Ubinding %s', name)
             comp = self.bound.pop(name)
             self.notify(comp, 'will_disassemble')
-            # todo set outlets/bindings to None
 
             for binding in self.bindings_for(comp):
               self.log.debug("  %s[%s] = None",  binding.attribute, binding.name)

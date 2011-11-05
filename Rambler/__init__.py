@@ -413,14 +413,8 @@ def load_classes(module_or_package_name, base_class):
   If a package name is given, the system will recurse the package loading each module that was found under 
   the package.
   '''
-  # closure used to
 
-  def filter_classes(obj):
-    if type(obj) == type:
-      return issubclass(obj, base_class) and obj.__module__.startswith(mod_name)
-    else:
-      return False
- 
+
   try:          
     __import__(module_or_package_name)
     module = sys.modules[module_or_package_name]
@@ -435,9 +429,8 @@ def load_classes(module_or_package_name, base_class):
       print "Error importing %s: %s" % (module_or_package_name, e)
     return []
   except ValueError:
-    import pdb; pdb.set_trace()
     pass
-    
+
   classes = set()
   for module in modules:
     for name, obj in module.__dict__.items():
@@ -493,10 +486,17 @@ class Component(type):
 
     return n_cls
     
-  def rebase(cls):      
-    for d in cls.__depends__: 
+  def rebase(cls):
+    for d in cls.__depends__:
       comp = cls.compReg.lookup(d.__name__)
       assert isinstance(comp, type)
+      
+      # Fix for unit tests, if the system is bound and rebound
+      # the rebased object remains which  break the search algorythm
+      # in load_classes. By replacing the placeholder class with the real
+      # component, it will be used instead of the placeholder next time
+      # Component.__new__ is called
+      Component.classes[d.__name__] = comp
       bases = list(cls.__bases__)
       try:
         bases[bases.index(d)] = comp
