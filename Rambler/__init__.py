@@ -1,4 +1,6 @@
 import os, sys,re
+import itertools
+flatten = itertools.chain.from_iterable
 
 from hashlib import md5
 # import these, here so other Rambler components can do a from Rambler import Interface, etc...
@@ -441,7 +443,7 @@ def load_classes(module_or_package_name, base_class):
 
   return classes
 
-is_python = re.compile('^.*py.?$')
+is_python = re.compile('^(?!__)(.*)\.py.?$')
 def recurse_package(package):
   # TODO: optimize me, looks like we're loading both pyc and py files, the sets filter it out
   # but it might save some load time
@@ -449,21 +451,24 @@ def recurse_package(package):
   yield package
   
   for root, dirs, files in os.walk(package.__path__[0]):
-    #todo: consider recursing subpackgaes i.e. the dirs
-    for f_name in files:
-      if not f_name.startswith('__') and is_python.match(f_name):
-        mod_name = '%s.%s' %(package.__name__, os.path.splitext(f_name)[0])
-        if mod_name not in sys.modules:
-          try:
-            __import__(mod_name)
-          except ImportError,e:
-            #todo: might be nice to log.debug this error here
-            #if not e.message.startswith('No module named'):
-            # blab about import errors other than no module named
-            print "Error importing %s: %s" % (mod_name, e)
-              
-            continue
-        yield sys.modules[mod_name]
+    x_root = root[len(package.__path__[0]) + 1:].split(os.path.sep)
+    for f_name,ignore in  itertools.groupby(sorted(flatten(filter(None, map(is_python.findall, files))))):
+      parts = [package.__name__]
+      parts.extend(x_root)
+      parts.append(f_name)
+      mod_name = '.'.join(filter(None,parts))
+      #print mod_name
+      if mod_name not in sys.modules:
+        try:
+          __import__(mod_name)
+        except ImportError,e:
+          #todo: might be nice to log.debug this error here
+          #if not e.message.startswith('No module named'):
+          # blab about import errors other than no module named
+          print "Error importing %s: %s" % (mod_name, e)
+            
+          continue
+      yield sys.modules[mod_name]
 
 #
 class Component(type):
