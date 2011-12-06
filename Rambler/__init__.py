@@ -68,8 +68,6 @@ class nil(object):
     else:
       raise TypeError, "unsupported operand type(s) for /: %s %s" % (nil, t)
       
-      
-  # todo implement standard operators for nil such as nil + 0 = 0
 nil = nil()
 
 class outlet(object):
@@ -150,14 +148,14 @@ class field(object):
     self.default = default
     
   def __call__(self, fget):
-    """Syntactic sugar for defining a getter using a descriptor"""
+    """Syntactic sugar for defining a getter using a descriptor see setter for example"""
     self.fget = fget
     return self
     
   def setter(self, fset):
     """Syntactic sugar for defining a setter using a descriptor
     
-    Example
+    Example:
     
     class Foo(Entity):
       name field(str)
@@ -168,7 +166,8 @@ class field(object):
         self['name'] = value
     """
     self.fset = fset
-    return fset
+    #return fset
+    return self
     
   def attr_name(self, cls):
     # Return the attribute name the field is bound to
@@ -180,7 +179,7 @@ class field(object):
     
   def __get__(self, instance, cls):
     if instance is None:
-        # Some one's getting the attribute directly off the class
+        # Someone's getting the attribute directly off the class
         return self
         
     if self.fget:
@@ -197,16 +196,17 @@ class field(object):
 
   def __set__(self, obj, value):
     # TODO: Might need away to specify that a field allows none
-    
+    name = self.attr_name(obj.__class__)
+          
     if self.fset:
       return self.fset(obj, value)
 
-    name = self.attr_name(obj.__class__)
+
     if value is not None and not isinstance(value, self.type):
       try:
         value = self.type(value)
       except:
-        raise TypeError, "Expecting %s for for %s" % (self.type, name)
+        raise TypeError, "Expecting %s for %s" % (self.type, name)
 
     obj.attr[name] = value
 
@@ -261,6 +261,31 @@ def annotateCurrentClass(method,*args,**kw):
 
     method(locals, *args, **kw)
 
+def asynch(func):
+  """Decorator for declaring asynch functions.
+  
+  Automatically adds a dependency to the scheduler to your component. Any invocation made
+  to the method will be scheduled using scheduler.call()
+  """
+  
+  frame = sys._getframe(1)
+  locals = frame.f_locals
+  try:
+    if (locals is frame.f_globals) or (
+      ('__module__' not in locals) and sys.version_info[:3] > (2, 2, 0)):
+      raise TypeError("option can be used only from a class definition.")
+
+    if 'scheduler' not in locals:
+      locals['scheduler'] = outlet('Scheduler')
+  finally:
+    del frame
+    del locals
+  
+  def method(*args):
+    scheduler = args[0].scheduler
+    return scheduler.call(func,*args)
+  return method
+  
 
 
 
@@ -416,7 +441,8 @@ def load_classes(module_or_package_name, base_class):
   the package.
   '''
 
-
+  #if module_or_package_name == 'trivio.services':
+  #  import pdb; pdb.set_trace()
   try:          
     __import__(module_or_package_name)
     module = sys.modules[module_or_package_name]
@@ -452,12 +478,13 @@ def recurse_package(package):
   
   for root, dirs, files in os.walk(package.__path__[0]):
     x_root = root[len(package.__path__[0]) + 1:].split(os.path.sep)
+
     for f_name,ignore in  itertools.groupby(sorted(flatten(filter(None, map(is_python.findall, files))))):
       parts = [package.__name__]
       parts.extend(x_root)
       parts.append(f_name)
       mod_name = '.'.join(filter(None,parts))
-      #print mod_name
+
       if mod_name not in sys.modules:
         try:
           __import__(mod_name)

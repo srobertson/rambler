@@ -1,41 +1,28 @@
-import os, signal, sys,threading, socket, pickle, resource
-import pwd, grp, select, time, traceback
-import random
+import pwd
+import os
+import signal
+import socket
+import sys
+import traceback
+
 from hashlib import md5
 
 import pkg_resources
 
 from Rambler import outlet, Bundle, Component
-from Rambler.CompBinder import CompBinder, Binding
+from Rambler.CompBinder import CompBinder
 from Rambler.ciConfigService import ciConfigService, DictConfigSource
 from Rambler.ErrorFactory import ErrorFactory
 from Rambler.Services import ServiceHandler
 from Rambler.ServiceRegistry import ServiceRegistry
 from Rambler.SessionRegistry import SessionRegistry
-from Rambler.SessionHandler import SessionHandler
-from Rambler.LoggingExtensions  import LogService
 
+from Rambler.LoggingExtensions  import LogService
+from Rambler.RunLoop import RunLoop, Port
 
 
 from Rambler.twistedlogging import  StdioOnnaStick
 from Rambler.defer import Deferred
-
-from zope.interface import classProvides, implements
-
-
-from Rambler.RunLoop import RunLoop, Port
-
-
-from Rambler.handlers import CompoundHandler
-from Rambler import AppConfig
-
-
-from xml.sax import make_parser,SAXParseException
-from xml.sax.handler import feature_namespaces
-import StringIO
-
-
-
 
 
 class AppErrNeedsLoading(Exception):
@@ -67,20 +54,41 @@ class AppErrDuringLoad(Exception):
             msg += "\n" + self.loadErr
         return msg
 
-# try to find an unused port, useful for testing
+
+    
+class Config(object):
+
+    def __init__(self, extension_names):
+        self.extensions = set([Extension('Rambler')])
+        self.user  = None
+        self.group = None
+        
+        for name in extension_names:
+            self.extensions.add(Extension(name))
+
+class Extension(object):
+    def __init__(self, name):
+        self.name = name
+        self.options = {}
+  
                 
 
 
 class Application(object):
 
-
     eventChannel = outlet('EventService')
     componentRegistry = outlet('ComponentRegistry')
     configService = outlet('ConfigService')
     txn = outlet('TransactionService')
-    txnDescriptionService = outlet('TXNDescriptionService')
+    
+    # TODO: Debug why binding a controller breaks the whole system
+    # ... well I know why the it's because the SessionRegistery (which loads)
+    # the controllers needs the Application object so it knows what extensions
+    # to look for. Binding a controller then forces the SesionRegistery to not be loaded
+    #Scheduler = outlet('Scheduler')
+
     log = outlet('LogService')
-    timerService = outlet('TimerService')
+
 
 
 
@@ -105,7 +113,7 @@ class Application(object):
 
     __slots__ = ['name', 'config','appDir', 'pidPath', 'configFile', 'context',
                  'status', 'configError', 'digest',
-                 'deferred', '_dh',
+                 'deferred', '_dh','scheduler',
                  'appBundle','mainRunLoop',
                  ]
 
@@ -198,6 +206,69 @@ class Application(object):
         self.componentRegistry.bind()
 
 
+    @property
+    def run_loop(self):
+      return self.mainRunLoop
+
+    @property
+    def queue(self):
+      if not hasattr(self, 'scheduler'):
+        self.scheduler = self.lookup('Scheduler')
+      return self.scheduler.queue
+
+    def quit(self, *args):
+      # Stop the runloop while giving anything scheduled to run in the current
+      # loop a chance to execute first.
+      self.run_loop.waitBeforeCalling(0, self.run_loop.stop)
+
+    def quit_with_error(self, failure):
+      # Called to handle a defered failure
+      self.quit()
+      return failure
+
+    def quit_with_result(self, result):
+      self.quit()
+      return result
+          
+    def wait_for(self, operation, timeout=5):
+      """Test methods can use this method to execute an operation via the runLoop
+      and wait for it to complete.
+
+      Parameters:
+        operation | defered: Operation to be scheduled on the run loop
+        [callback]: Method to invoke after operation has finished. Note if 
+                    callback is used you must explicitly call self.run_loop.stop()
+                    in your unit test.
+        [timeout]: Max time in seconds to wait before giving up on the operation.
+      
+      Discussion:
+      Operations are queued in the default scheduler and then the run loop is started.
+      It is an error to use this method if the RunLoop is arleady active.
+
+
+      """
+      
+      # TODO: Remove this check when the Scheduler no longer useses deferred's
+      if isinstance(operation, Deferred):
+        operation.addCallbacks(self.quit_with_result, self.quit_with_error)
+        self.wait(timeout)
+
+        if hasattr(operation.result, 'raiseException'):
+          operation.result.raiseException()
+      else:
+        operation.add_observer(self, 'is_finished', 0, self.quit)
+        self.queue.add_operation(operation)
+      
+        self.wait(timeout)
+        
+      # Both deferred or an operation will return here
+      return operation.result
+
+
+    def wait(self, timeout=5):
+      self.mainRunLoop.waitBeforeCalling(timeout, self.quit)
+      self.mainRunLoop.run()
+
     def loadConfig(self):
 
         configStatus = self.getConfigStatus()
@@ -214,7 +285,14 @@ class Application(object):
         assert configStatus == Application.CONFIG_MODIFIED
                 
         self.configError = ""
-        self.config = AppConfig.parse(self.configFile)
+        
+        extensions = set()
+        ext_dir = self.appBundle.pathForResource('extensions')
+        if os.path.isdir(ext_dir):
+          extensions.update(os.listdir(ext_dir))
+        
+        
+        self.config = Config(extensions)
     
 
     def getConfigStatus(self):
@@ -242,7 +320,7 @@ class Application(object):
 
 
      
-
+        
     def load(self):
         
         """Sets up the message bus if we have a controller then set
@@ -254,8 +332,6 @@ class Application(object):
 
         if self.getStatus() not in (Application.MISCONFIGURED, Application.STOPPED, Application.CRASHED):
             raise AppErrLoaded()
-
-        self.deferred = Deferred()
             
         old=signal.signal(signal.SIGINT, self.sighandler )
         old=signal.signal(signal.SIGTERM, self.sighandler )
@@ -265,24 +341,11 @@ class Application(object):
         # the App is done.
 
 
-        # This won't fully assemble the App, that doesn't happen until
-        # we load the core descriptor. But we should have just enough
-        # to log and send LCP messages
-
-        RunLoop.currentRunLoop().waitBeforeCalling(0, self.setStatus, Application.STARTING)
-
-        return self.deferred
-                
-        
-    def _load(self, **defaultComps):
-
         try:
-            self.switchUser()
-            self.switchGroup()
+            self.switch_user()
+            self.switch_group()
 
-            self._dh = CompoundHandler()
-
-            #self.shutdownLock = threading.Event()
+            #self._dh = CompoundHandler()
 
             # Here's were we'd load up the config file, the core services,
             # any extensions and register this object as a service, fire
@@ -301,19 +364,17 @@ class Application(object):
             # globaly from descriptors.
             
             compReg.addComponent("SessionRegistry", SessionRegistry())
-            compReg.addComponent("SessionHandler", SessionHandler())
+
             
             compReg.bind()
             
 
-            self.registerHandler(compReg.get("ServiceHandler"))
+            #self.registerHandler(compReg.get("ServiceHandler"))
            
             
             # TODO: Get rid of descriptor all together
-            coreDescriptor = pkg_resources.resource_stream('Rambler', 'descriptor.xml')
-            
-
-            self.__loadExtension(coreDescriptor)
+            #coreDescriptor = pkg_resources.resource_stream('Rambler', 'descriptor.xml')
+            #self.__loadExtension(coreDescriptor)
 
             # Bind the core service to each other
             compReg.bind()
@@ -321,35 +382,12 @@ class Application(object):
             self.eventChannel.registerEvent("Shutdown", self, str)
 
 
-            self.registerHandler(compReg.get("EntityHandler"))
-            self.registerHandler(compReg.get("RelationHandler"))
-            self.registerHandler(compReg.get("TXNHandler"))
-
-            self.txnDescriptionService.setTransAttribute('Application', 'shutdown', self.txnDescriptionService.Never)
-            self.txnDescriptionService.setTransAttribute('Application', 'noOp', self.txnDescriptionService.Supports)
 
             options = {}
             for extension in self.config.extensions:
                 options[extension.name] = extension.options
 
             self.configService.addConfigSource(DictConfigSource(options))
-
-            # TODO: Descriptors are depricated, the following loop is disabled to see if
-            # we can operate w/o it. Remove for statement after 5/01/10 
-            self.log.debug("loading %s extensions from %s" % (len(self.config.extensions), self.configFile))
-            for extension in self.config.extensions:
-                break
-                self.log.debug("  " + extension.name)
-
-                if os.path.exists(extension.descriptor):
-                    self.log.debug("    reading " + extension.descriptor)
-
-                    #if extension.extensionDir not in sys.path:
-                    #    sys.path.append(extension.extensionDir)
-
-                    self.__loadExtension(open(extension.descriptor))
-                else:
-                    self.log.warn("    missing " + extension.descriptor)
 
             compReg.bind()
 
@@ -395,50 +433,7 @@ class Application(object):
     def noOp(self):
         # needed to make corba clients happy
         pass
-    
-
-    
-    def registerHandler(self, handler):
-
-        """Adds a handler that will be called for each SAX event fired
-        while reading the descriptor."""
-        self._dh.addHandler(handler)
-
-    def __loadExtension(self, extension):
-        """Load the extension found in the xml.
-
-        extension can either be a string containing vaild xml or an
-        open file handle that containts valid xml.
-        """
-        # Create a parser
-        parser = make_parser()
         
-        # Tell the parser we are not interested in XML namespaces
-        parser.setFeature(feature_namespaces, 0)
-
-        # Tell the parser to use our handler
-        parser.setContentHandler(self._dh)
-
-        # Parse the descriptor file
-        try:
-            if type(extension) == str:
-                extension = StringIO.StringIO(extension)
-
-            parser.parse(extension)
-        except IOError, e:
-            self.log.exception("Error loading descriptor file.\n%s" % e)
-            raise
-        except SAXParseException,e:
-            
-            # Make it easier to see when you have malformed xml by
-            # raising a runtime error to hide the sax stack trace
-            
-            raise RuntimeError, "Error parsing descriptor %s " \
-                  "error: %s line: %s column: %s" %\
-                  (e.getSystemId(), e.getMessage(),
-                   e.getLineNumber(), e.getColumnNumber())
-
-    
     def isRunning(self):
         return self.status == Application.STARTED
 
@@ -449,12 +444,13 @@ class Application(object):
     def getStatus(self):
         return self.status
 
+    # TODO: I think setStatus is defunc
     def setStatus(self, status, details=None):
         """Sends a life cycle notification to the controlling process, if any."""
         self.onStatusSent(None, status)
 
 
-    def switchUser(self):
+    def switch_user(self):
 
         if self.config.user: # The config file has a user, so attempt to switch to it
             user = self.config.user
@@ -471,7 +467,7 @@ class Application(object):
                                    (user, self.configFile))
             os.setuid(uid)
 
-    def switchGroup(self):
+    def switch_group(self):
         if self.config.group: # The config file has a group, attempt to switch to it
             group = self.config.group
             if os.getuid() != 0:

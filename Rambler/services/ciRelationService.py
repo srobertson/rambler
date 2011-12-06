@@ -4,7 +4,6 @@ the reltion service to track relations."""
 from Rambler import outlet
 from bisect import bisect
 from Rambler.Events import NewEntityEvent
-from Rambler.EventChannel import Handler
 from Rambler.handlers import DefaultHandler
 
 from copy import copy

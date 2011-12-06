@@ -4,11 +4,11 @@ from bisect import insort
 
 from zope.interface import implements
 from zope.interface.verify import verifyObject
-from IEventChannel import IEventChannel, ISubscriber
+from Rambler.IEventChannel import IEventChannel, ISubscriber
 from zope.interface import Interface
 
 
-class EventChannel(object):
+class EventService(object):
     """Implements the EventChannel interface. See IEventChannel for
     usage informatin.
 

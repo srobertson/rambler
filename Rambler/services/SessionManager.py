@@ -1,6 +1,5 @@
 from Rambler import outlet, option
 from Rambler.Synchronized import synchronized
-from Rambler.EventChannel import Handler
 from Rambler.Events import LoginEvent
 
 
@@ -49,14 +48,14 @@ class SessionManager(object):
         # Subscribe after our applications bootstrapper
 
         self.eventChannel.subscribeToEvent(
-            "login",Handler(self.newSession), LoginEvent)
+            "login",self.newSession, LoginEvent)
 
 
         self.eventChannel.subscribeToEvent(
-            "logout",Handler(self.removeSession), str)
+            "logout",self.removeSession, str)
 
         self.eventChannel.subscribeToEvent(
-            "Shutdown",Handler(self.logoutAllSessions), str)
+            "Shutdown",self.logoutAllSessions, str)
 
         # We publish logout whenever the same user tries to login
         # twice in a row.

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import inspect
+import errno
 import os
 import sys
 import unittest
@@ -15,7 +16,7 @@ from Rambler.SessionRegistry import SessionRegistry
 from Rambler.ciConfigService import ciConfigService, DictConfigSource
 from Rambler.ErrorFactory import ErrorFactory
 from Rambler.RunLoop import RunLoop, Port
-from Rambler.EventChannel import EventChannel
+#from Rambler.EventChannel import EventChannel
 from Rambler.LoggingExtensions import LogService
 from Rambler import Component
 
@@ -108,22 +109,19 @@ class TestCase(unittest.TestCase):
       inst.app = app
       inst.app_name = app.name
       compReg.addComponent(name, inst)
-    self.eventChannel = EventChannel()
-    self.eventChannel.registerEvent("Initializing", self, str)
     
-    for event in self.publishing:
-      self.eventChannel.registerEvent(event, self, object)
-    
-    compReg.addComponent('EventService', self.eventChannel)
+
+
     ls = LogService()
 
     log_dir = os.path.join(app_dir, 'log')
     log_path = os.path.join(log_dir, 'test.log')
     try:
       log_file = open(log_path,'a')
-    except IOError:
+    except IOError, e:
       os.makedirs(log_dir)
       log_file = open(log_path,'a')
+        
 
     ls.useStreamHandler(log_file)
     compReg.addComponent('LogService', ls)
@@ -131,6 +129,15 @@ class TestCase(unittest.TestCase):
     compReg.addComponent('PortFactory', Port)
     compReg.addComponent("Component", Component)
     compReg.bind()
+    
+    self.eventChannel = compReg.lookup('EventService')
+    self.eventChannel.registerEvent("Initializing", self, str)
+    
+    for event in self.publishing:
+      self.eventChannel.registerEvent(event, self, object)
+    
+    compReg.addComponent('EventService', self.eventChannel)
+    
     
     serviceRegistry = compReg.lookup('ServiceRegistry')
     configService = ciConfigService()

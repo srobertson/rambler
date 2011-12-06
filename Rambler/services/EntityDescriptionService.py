@@ -85,17 +85,12 @@ class EntityDescriptionService(object):
 
         entityClass = getClass(classPath)
         for fieldDef in entityInfo:
-            #import pdb; pdb.set_trace()
             # Add any properties that weren't  implemented by the base class.
             if not entityClass.__dict__.has_key(fieldDef.name):
                 setattr(entityClass, fieldDef.name, 
                         field(fieldDef.name, fieldDef.type))
 
 
-
-        # TODO: Consider not deriving classes and just modifying the class in place...
-        #entityClass = deriveClass(compName, getClass(classPath), entityInfo)
-        #modClass(entityClass)
 
         # Store the fields keyed both on the EntityName and the Class itself
         self._entityInfo[entityName] = entityInfo

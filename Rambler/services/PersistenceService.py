@@ -1,4 +1,3 @@
-from Rambler.EventChannel import Handler
 from Rambler.UnitOfWork import UnitOfWork
 
 from zope.interface import Interface
@@ -44,9 +43,9 @@ class PersistenceService(object):
     def assembled(self):
         # Subscribe to the commit and rollback events
         self.eventChannel.subscribeToEvent(
-            "prepare", Handler(self.prepare), str)
+            "prepare", self.prepare, str)
         self.eventChannel.subscribeToEvent(
-            "rollback", Handler(self.rollback), str)
+            "rollback", self.rollback, str)
 
         # Register to vote
         self.eventChannel.registerEvent("vote", self, Vote)

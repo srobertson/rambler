@@ -15,7 +15,7 @@ from types import ListType
 from Rambler.fstr import fstr
 
 from Rambler.Events import Vote
-from Rambler.EventChannel import Handler
+
 
 
 #from epo import NoSectionError, NoOptionError
@@ -380,7 +380,7 @@ class EntityConfigSource(object):
   configService = outlet("ConfigService")
   
   def assembled(self):
-    self.eventChannel.subscribeToEvent("Initializing", Handler(self.init), str)
+    self.eventChannel.subscribeToEvent("Initializing", self.init, str)
 
 
   def init(self, tid):

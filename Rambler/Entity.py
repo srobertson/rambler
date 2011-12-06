@@ -128,6 +128,8 @@ class RObject(object):
         set_method_name = 'set_' + key
         
         if hasattr(self, set_method_name):
+            # TODO: using the field.setter decorator on a method
+            # named set_<key> causes error
             getattr(self, set_method_name)(value)
         elif hasattr(self, key) or attribute_type:
             # if the object already has a key with the value or it's 

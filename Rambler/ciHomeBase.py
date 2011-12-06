@@ -1,11 +1,5 @@
-#import omniORB
-#from omniORB import CORBA
-#from omniORB.CORBA import TRANSIENT, BAD_PARAM, NO_PERMISSION, COMM_FAILURE
-#from epo import EntityInfo, CreateException
-
 from time import time
 
-from Rambler.EventChannel import Handler
 from Rambler import outlet, error
 from Money import Money
 
@@ -272,7 +266,7 @@ class ciHomeBase(object):
 
     def _set_eventChannel(self, eventChannel):
         eventChannel.subscribeToEvent("logout",
-                                      Handler(self.cleanupObservers),
+                                      self.cleanupObservers,
                                       str)
 
         #eventChannel.subscribeToEvent("Initializing", Handler(self.initKeyGen), str)
