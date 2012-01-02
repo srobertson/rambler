@@ -205,7 +205,7 @@ class field(object):
     if value is not None and not isinstance(value, self.type):
       try:
         value = self.type(value)
-      except:
+      except Exception,e:
         raise TypeError, "Expecting %s for %s" % (self.type, name)
 
     obj.attr[name] = value
@@ -281,11 +281,36 @@ def asynch(func):
     del frame
     del locals
   
-  def method(*args):
+  def method(*args,**kw):
     scheduler = args[0].scheduler
-    return scheduler.call(func,*args)
+    return scheduler.call(func,*args,**kw)
   return method
   
+def coroutine(func):
+  """Decorator for declaring asynch functions.
+
+  Automatically adds a dependency to the scheduler to your component. Any invocation made
+  to the method will be scheduled using scheduler.new()
+  """
+
+  frame = sys._getframe(1)
+  locals = frame.f_locals
+  try:
+    if (locals is frame.f_globals) or (
+      ('__module__' not in locals) and sys.version_info[:3] > (2, 2, 0)):
+      raise TypeError("option can be used only from a class definition.")
+
+    if 'scheduler' not in locals:
+      locals['scheduler'] = outlet('Scheduler')
+  finally:
+    del frame
+    del locals
+
+  def start(*args,**kw):
+    scheduler = args[0].scheduler
+    return scheduler.new(func(*args,**kw))
+  return start
+
 
 
 
@@ -441,8 +466,6 @@ def load_classes(module_or_package_name, base_class):
   the package.
   '''
 
-  #if module_or_package_name == 'trivio.services':
-  #  import pdb; pdb.set_trace()
   try:          
     __import__(module_or_package_name)
     module = sys.modules[module_or_package_name]

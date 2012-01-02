@@ -101,18 +101,14 @@ class OperationQueue(object):
   suspended = property(suspended, set_suspended)
         
   def observe_value_for(self, key_path, of_object, change):
-    if self.name.startswith('Disco'):
-      print self.name, key_path, of_object
     if key_path == 'is_finished' and of_object.is_finished:
       #self.log.info('<<< of_object %s finished', of_object)
       self.run_loop.callFromThread(self.__operation_finished, of_object)
 
       
   def __operation_finished(self, operation):
-    if self.name.startswith('Disco'):
-      print 'removing', operation
-    
     operation.remove_observer(self, 'is_finished')
+      
     self.executing.remove(operation)
     if self._operations and not self._operations[0].is_ready:
       heapq.heapify(self._operations)
@@ -126,10 +122,10 @@ class OperationQueue(object):
       for x in range(num_to_launch):          
         if len(self._operations) and self._operations[0].is_ready:
           operation = heapq.heappop(self._operations)
-          self.log.info('Starting operation %s', operation)
+          #self.log.info('Starting operation %s', operation)
           operation.add_observer(self, 'is_finished')
           self.executing.add(operation)
-          self.log.info('Executing operation %s', operation)
+          #self.log.info('Executing operation %s', operation)
           if  operation.is_concurrent:
             operation.start()
           else:

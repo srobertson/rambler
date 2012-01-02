@@ -10,6 +10,7 @@ class Scheduler(object):
   """Provides threading like behavior to pyhon generators."""
   log = outlet('LogService')
   Operation = outlet('Operation')
+  CoroutineOperation = outlet('CoroutineOperation')
   OperationQueue = outlet('OperationQueue')
   RunLoop = outlet('RunLoop')
   
@@ -24,6 +25,12 @@ class Scheduler(object):
     self.queue = self.OperationQueue()
     self.queue.name = "Main Queue"
 
+  def new(self, gen_op_or_value):
+    """New style coroutine operation, uses the schedulers queue.
+    Scheduler.call may soon be replaced with this method
+    """
+    return self.CoroutineOperation.new(gen_op_or_value, self.queue)
+    
   def newticket(self):
    return Deferred()
   
@@ -71,7 +78,7 @@ class Scheduler(object):
       d_args=[ticket, gen, 0, 1]
       run_loop = self.RunLoop.currentRunLoop()
       invocations.add_observer(self, 'is_finished', 0, run_loop, *d_args)
-      invocations.add_observer(self, 'is_cancelled', run_loop)
+      invocations.add_observer(self, 'is_cancelled', 0, run_loop)
       if not invocations.is_executing:
         self.queue.add_operation(invocations)
       return
@@ -127,6 +134,13 @@ class Scheduler(object):
           ticket.callback(e.args[0])
         else:
           ticket.callback(None)
+      except Exception,e:
+        # coroutine didn't handle the failure or their was a new one
+        import traceback
+        err = traceback.format_exc()
+        #self.log.exception('Coroutine did not handle\n%s',err)
+        ticket.errback(err)
+    
       
   def errback(self, failure, ticket, thread, seq, count):
     if isinstance(failure, Exception):

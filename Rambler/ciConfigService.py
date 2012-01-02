@@ -6,12 +6,13 @@
 # because at one point we gave it the ability to edit files. Not sure
 # the state of this.
 
-from Rambler import outlet, error
+
 from optparse import OptionParser
 
 import ConfigParser, os
 from types import ListType
 
+from Rambler import outlet, error
 from Rambler.fstr import fstr
 
 from Rambler.Events import Vote

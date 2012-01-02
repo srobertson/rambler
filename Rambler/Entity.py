@@ -126,7 +126,6 @@ class RObject(object):
 
         
         set_method_name = 'set_' + key
-        
         if hasattr(self, set_method_name):
             # TODO: using the field.setter decorator on a method
             # named set_<key> causes error
@@ -179,7 +178,14 @@ class RObject(object):
       
       
             
-    # KVO
+    # KVO Methods
+    
+    def has_observer(self, observer, key_path):
+      """Return true if the given observer is observing the given key_path"""
+      if  hasattr(self, '_oldvals'):
+        return (observer, key_path) in self.observation_info
+      
+      
     def add_observer(self, observer, key_path, options=0, *args, **kw):
       """Register an observer to hear Key/Value events"""
       if not hasattr(self, '_oldvals'):

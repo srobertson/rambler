@@ -46,7 +46,6 @@ class InvocationOperation(component('Operation')):
     with self.changing('is_finished', 'is_executing'):
       if not self.is_cancelled:
         try:
-          print '>>>', self.invocation.__name__
           self._result = self.invocation(*self.args, **self.kw)
         except Exception, e:
           self._result = e

@@ -1054,7 +1054,7 @@ class RunLoop(object):
         pass
       handleException = ignoreExceptionHandler  
       
-      def run(self):
+      def run(self, reset_on_stop=True):
          """Keeps the runLoop going until it's explicitly stoped or it runs out
          of things to monitor."""
          
@@ -1069,8 +1069,9 @@ class RunLoop(object):
             except Exception, e:
                self.log.exception("Caught unexpected error in RunOnce.")
                self.handleException(e)
-               
-         self.reset()
+         
+         if reset_on_stop:      
+           self.reset()
 
       def runUntil(self, stopDate=None, **kw):
          """Runs the runLoop until the given time plus interval have been

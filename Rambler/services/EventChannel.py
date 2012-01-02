@@ -26,6 +26,12 @@ class EventService(object):
     implements(IEventChannel)
     log = outlet("LogService",missing=nil)
     
+    #def will_disassemble(self):
+    #  self._events.clear()
+    #  self._publishers.clear()
+    #  self._subscribers.clear()
+    #  self._exclusive.clear()
+       
     def __init__(self):
         self._events={}     # Dictionary of event name to interface
                             # mapping. 

@@ -210,6 +210,10 @@ class Application(object):
     def run_loop(self):
       return self.mainRunLoop
 
+    def observe_value_for(self, key_path, of_object, change, *args):
+      args[0](of_object)
+      of_object.remove_observer(self, key_path)
+
     @property
     def queue(self):
       if not hasattr(self, 'scheduler'):
@@ -266,8 +270,10 @@ class Application(object):
 
 
     def wait(self, timeout=5):
-      self.mainRunLoop.waitBeforeCalling(timeout, self.quit)
-      self.mainRunLoop.run()
+      timer = self.mainRunLoop.waitBeforeCalling(timeout, self.quit)
+      self.mainRunLoop.run(reset_on_stop=False)
+      if not timer.called:
+        timer.cancel()
 
     def loadConfig(self):
 
@@ -345,8 +351,6 @@ class Application(object):
             self.switch_user()
             self.switch_group()
 
-            #self._dh = CompoundHandler()
-
             # Here's were we'd load up the config file, the core services,
             # any extensions and register this object as a service, fire
             # off the Initilization event to tell the components that
@@ -364,17 +368,6 @@ class Application(object):
             # globaly from descriptors.
             
             compReg.addComponent("SessionRegistry", SessionRegistry())
-
-            
-            compReg.bind()
-            
-
-            #self.registerHandler(compReg.get("ServiceHandler"))
-           
-            
-            # TODO: Get rid of descriptor all together
-            #coreDescriptor = pkg_resources.resource_stream('Rambler', 'descriptor.xml')
-            #self.__loadExtension(coreDescriptor)
 
             # Bind the core service to each other
             compReg.bind()

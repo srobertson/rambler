@@ -14,6 +14,12 @@ class Series(defaultdict):
 
 class TimeSeries(object):
   series = {}
+  
+  @classmethod
+  def will_disassemble(cls):
+    cls.series.clear()
+  
+  
   def __init__(self, name, maxlen=15, now_method=time.time, **kw):
     if self.series.has_key(name):
       raise IndexError, "TimesSeries %s already exists" % name
