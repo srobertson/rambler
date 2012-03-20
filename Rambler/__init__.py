@@ -261,30 +261,6 @@ def annotateCurrentClass(method,*args,**kw):
 
     method(locals, *args, **kw)
 
-def asynch(func):
-  """Decorator for declaring asynch functions.
-  
-  Automatically adds a dependency to the scheduler to your component. Any invocation made
-  to the method will be scheduled using scheduler.call()
-  """
-  
-  frame = sys._getframe(1)
-  locals = frame.f_locals
-  try:
-    if (locals is frame.f_globals) or (
-      ('__module__' not in locals) and sys.version_info[:3] > (2, 2, 0)):
-      raise TypeError("option can be used only from a class definition.")
-
-    if 'scheduler' not in locals:
-      locals['scheduler'] = outlet('Scheduler')
-  finally:
-    del frame
-    del locals
-  
-  def method(*args,**kw):
-    scheduler = args[0].scheduler
-    return scheduler.call(func,*args,**kw)
-  return method
   
 def coroutine(func):
   """Decorator for declaring asynch functions.

@@ -13,7 +13,7 @@ from Rambler import outlet, Bundle, Component
 from Rambler.CompBinder import CompBinder
 from Rambler.ciConfigService import ciConfigService, DictConfigSource
 from Rambler.ErrorFactory import ErrorFactory
-from Rambler.Services import ServiceHandler
+from Rambler.services import ServiceHandler
 from Rambler.ServiceRegistry import ServiceRegistry
 from Rambler.SessionRegistry import SessionRegistry
 
