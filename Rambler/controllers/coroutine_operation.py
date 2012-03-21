@@ -61,7 +61,12 @@ class CoroutineOperation(component('Operation')):
   def wait_for_op(self, op):    
     op.add_observer(self, 'is_finished')
     op.add_observer(self, 'is_cancelled')
-    self.queue.add_operation(op)
+    # to avoid lock ups, we skip the queue and run the operation directly
+    if  op.is_concurrent:
+      op.start()
+    else:
+      self.queue.thread_pool_queue.put(op)
+    
     
   def observe_value_for(self, key_path, op, change):
     # Note: observe_value is not guarnteed to come from the same thread, no?
@@ -70,6 +75,7 @@ class CoroutineOperation(component('Operation')):
     op.remove_observer(self, 'is_cancelled')
     
     if key_path == 'is_finished':
+
       self.send(op.result)
     elif key_path == 'is_cancelled':
       # is waiting here even important? generators will receive generator exit without this

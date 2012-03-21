@@ -25,7 +25,7 @@ class OperationQueue(object):
     
     self._max_concurrent_operation_count = 0
     
-    # TODO: move this to a configuration servier or some other service that
+    # TODO: move this to a configuration service or some other service that
     # returns platform information
     
     # Determine number of processors in the machine
