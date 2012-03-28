@@ -1,3 +1,4 @@
+import sys
 import types
 
 from Rambler import component, outlet
@@ -6,6 +7,8 @@ from Rambler import component, outlet
 class CoroutineOperation(component('Operation')):
   RunLoop = outlet('RunLoop')
   is_concurrent = True
+  _result = None
+  _exc_info = None
   
   @classmethod
   def new(cls, gen_op_or_result, queue):    
@@ -35,23 +38,37 @@ class CoroutineOperation(component('Operation')):
       self.send(None)
       
   def run(self, value):
+    """Recevies the results of the last operation we were waiting for.
+    """
     if self.is_cancelled:
       self.target.close()
       return
       
     try:
-      # todo check value and call target.throw if it derives from an exception
-      result = self.target.send(value)
+      if  isinstance(value, Exception):
+        # exception encountered from the last operation, give the 
+        # coroutine a chance to rescue it. If it can't we'll catch
+        # the error in the generic exception handler.
+        result = self.target.throw(value)
+      else:
+        # The value the coroutine was waiting for is here, give it back to the coroutine
+        result = self.target.send(value)
     except StopIteration:
-      self.result = value
+      # coroutine finished gracefully
+      self._result = value
       return self.finish()
-    except Exception,e:
-      self.result = e
+    except:
+      # coroutine finished not so gracefully, save the exception so we rethrow it if someone
+      # access the results of this operation
+      self._exc_info = sys.exc_info()
       return self.finish()
       
     if  isinstance(result, self.Operation) or isinstance(result, types.GeneratorType):
+      # After processing the value, the coroutine want's us to wait on another operation
       self.wait_for_op(self.new(result,self.queue))
     else:
+      # normal value, the coroutine was yielding controll to us, we'll return to it
+      # in the next pass of the run loop.
       self.send(result)
 
   
@@ -61,6 +78,7 @@ class CoroutineOperation(component('Operation')):
   def wait_for_op(self, op):    
     op.add_observer(self, 'is_finished')
     op.add_observer(self, 'is_cancelled')
+    # self.replace(op)
     # to avoid lock ups, we skip the queue and run the operation directly
     if  op.is_concurrent:
       op.start()
@@ -87,6 +105,20 @@ class CoroutineOperation(component('Operation')):
         self.finished = True
         # cleanup just because
         self.queue = self.target = None
+  
+  @property
+  def result(self):
+    """ Result of the operation
+    Evaluates to the value of the last succesful operation or throws an exception.
+    It is an error to call this 
+
+    """
+    if self._exc_info:
+      raise self._exc_info[0],self._exc_info[1], self._exc_info[2]
+    else:
+      return self._result
+
+
 
     
 
