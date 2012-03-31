@@ -25,11 +25,11 @@ class Scheduler(object):
     self.queue = self.OperationQueue()
     self.queue.name = "Main Queue"
 
-  def new(self, gen_op_or_value):
+  def new(self, gen_op_or_value, context=None):
     """New style coroutine operation, uses the schedulers queue.
     Scheduler.call may soon be replaced with this method
     """
-    return self.CoroutineOperation.new(gen_op_or_value, self.queue)
+    return self.CoroutineOperation.new(gen_op_or_value, self.queue, context)
     
   def newticket(self):
    return Deferred()

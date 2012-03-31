@@ -1,7 +1,8 @@
 import sys
 import types
+import threading
 
-from Rambler import component, outlet
+from Rambler import component, outlet,coroutine
 
   
 class CoroutineOperation(component('Operation')):
@@ -11,23 +12,26 @@ class CoroutineOperation(component('Operation')):
   _exc_info = None
   
   @classmethod
-  def new(cls, gen_op_or_result, queue):    
+  def new(cls, gen_op_or_result, queue, context=None):
     if isinstance(gen_op_or_result, cls.Operation):
       # already an operation
       op = gen_op_or_result
     elif isinstance(gen_op_or_result, types.GeneratorType):
-      op = CoroutineOperation(gen_op_or_result, queue)
+      op = CoroutineOperation(gen_op_or_result, queue, context)
     else: # it's a normal value
       return FinishedOperation(gen_op_or_result)
       
     return op
           
-  def __init__(self, target, queue):
+  def __init__(self, target, queue, context=None):
     super(CoroutineOperation,self).__init__()
     self.run_loop = self.RunLoop.currentRunLoop()
     self.name     = target.__name__
     self.target   = target
     self.queue    = queue
+    if context is None:
+      context = threading.local()
+    self.context = context
     
   def __repr__(self):
     return "<coroutine({0}) name:{1} coroutine:{2}>".format(id(self), self.name, self.target)
@@ -45,27 +49,31 @@ class CoroutineOperation(component('Operation')):
       return
       
     try:
-      if  isinstance(value, Exception):
-        # exception encountered from the last operation, give the 
-        # coroutine a chance to rescue it. If it can't we'll catch
-        # the error in the generic exception handler.
-        result = self.target.throw(value)
-      else:
-        # The value the coroutine was waiting for is here, give it back to the coroutine
-        result = self.target.send(value)
-    except StopIteration:
-      # coroutine finished gracefully
-      self._result = value
-      return self.finish()
-    except:
-      # coroutine finished not so gracefully, save the exception so we rethrow it if someone
-      # access the results of this operation
-      self._exc_info = sys.exc_info()
-      return self.finish()
+      coroutine.context = self.context
+      try:
+        if isinstance(value, Exception):
+          # exception encountered from the last operation, give the 
+          # coroutine a chance to rescue it. If it can't we'll catch
+          # the error in the generic exception handler.
+          result = self.target.throw(value)
+        else:
+          # The value the coroutine was waiting for is here, give it back to the coroutine
+          result = self.target.send(value)
+      except StopIteration:
+        # coroutine finished gracefully
+        self._result = value
+        return self.finish()
+      except:
+        # coroutine finished not so gracefully, save the exception so we rethrow it if someone
+        # access the results of this operation
+        self._exc_info = sys.exc_info()
+        return self.finish()
+    finally:
+      coroutine.context = None
       
     if  isinstance(result, self.Operation) or isinstance(result, types.GeneratorType):
       # After processing the value, the coroutine want's us to wait on another operation
-      self.wait_for_op(self.new(result,self.queue))
+      self.wait_for_op(self.new(result,self.queue,self.context))
     else:
       # normal value, the coroutine was yielding controll to us, we'll return to it
       # in the next pass of the run loop.
@@ -93,7 +101,6 @@ class CoroutineOperation(component('Operation')):
     op.remove_observer(self, 'is_cancelled')
     
     if key_path == 'is_finished':
-
       self.send(op.result)
     elif key_path == 'is_cancelled':
       # is waiting here even important? generators will receive generator exit without this

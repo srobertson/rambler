@@ -284,7 +284,7 @@ def coroutine(func):
 
   def start(*args,**kw):
     scheduler = args[0].scheduler
-    return scheduler.new(func(*args,**kw))
+    return scheduler.new(func(*args,**kw), getattr(coroutine,'context', None))
   return start
 
 

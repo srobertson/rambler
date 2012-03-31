@@ -14,7 +14,7 @@ class KeyValue(object):
     self.body = None
 
     # Contstruct our grammar object    
-    Key = Word(name='key', rest=alpha_nums + '-')
+    Key = Word(name='key', allowed=alpha_nums + '-')
     Key.add_delegate(self)
 
     Value = Word(name='value')
@@ -24,7 +24,7 @@ class KeyValue(object):
     Headers = OneOrMore(Header, name="headers")
     Headers.add_delegate(self)
 
-    Payload = Chunk(name='body')
+    Payload = Octets(name='body')
     Payload.add_delegate(self)
     self.payload=Payload
 
@@ -33,11 +33,11 @@ class KeyValue(object):
     self.parser = Parser(Send)
     
   def on_enter(self, state):
-    #print >> sys.stderr, "enter", state
+    print >> sys.stderr, "enter", state
     pass
           
   def on_exit(self, state):
-    #print >> sys.stderr, "exit", state
+    print >> sys.stderr, "exit", state
     if state.name == 'key':
       self.key = state.value
     elif state.name == 'value':

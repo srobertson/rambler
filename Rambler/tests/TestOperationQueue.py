@@ -5,10 +5,6 @@ from Rambler.TestCase import TestCase
 
 class TestOperationQueue(TestCase):
   
-  def setUp(self):
-    super(TestOperationQueue, self).setUp()
-    self.run_loop = self.componentFor('RunLoop').currentRunLoop()
-    self.queue = self.comp()
     
   def test_queue(self):
     operation1 = Operation()

@@ -52,7 +52,7 @@ class TimeSeries(object):
     
   def count(self, name):
     now = self.now()
-    behind, remaining = divmod(now - self.current, self.precision.seconds)
+    behind, remaining = divmod((now - self.current).total_seconds(), self.precision.seconds)
     if behind > 0:
       self.advance(behind, now)
     

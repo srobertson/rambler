@@ -17,7 +17,7 @@ class Clock:
 class TestTimeSeries(TestCase):
   
   def test_normal(self):
-    return
+    #return
     clock = Clock()
     ts = self.TimeSeries(15, now_method=clock.now)
   
@@ -69,7 +69,7 @@ class TestTimeSeries(TestCase):
         
   def assert_series(self, ts, variable, *series):
     """Asserts that the given series equals the expected values"""
-    
+   
     for s, expected in zip(ts, series):
       self.assertEqual(s.id, expected[0], "Id %s does not match expected %s" % (s.id, expected[0]))
       self.assertEqual(s[variable], expected[1], "Id %s does not match expected %s" % (s.id, expected[0]))

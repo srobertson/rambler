@@ -110,8 +110,6 @@ class TestCase(unittest.TestCase):
       inst.app_name = app.name
       compReg.addComponent(name, inst)
     
-
-
     ls = LogService()
 
     log_dir = os.path.join(app_dir, 'log')
