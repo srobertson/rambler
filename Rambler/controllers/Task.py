@@ -4,14 +4,14 @@ import traceback
 import signal
 import errno
 
-from Rambler import outlet
+from Rambler import outlet, component
 
 #TODO: Move Stream to a component
 from Rambler.RunLoop import Stream
 
 
 
-class Task(object):
+class Task(component('Operation')):
   """Used to launch and interact with a subprocess asynchronously. 
   This is the only way you should execute a sub task.
   
@@ -96,6 +96,7 @@ class Task(object):
   
   runLoop = outlet('RunLoop')
   log = outlet('LogService')
+  is_concurrent = True
   __tasks = {}
   
   try:
@@ -108,6 +109,7 @@ class Task(object):
   @classmethod
   def assembled(cls):
     # Store the currentRunLoop, we'll dispatch all SIG_CHILD to it
+    cls.rebase()
     cls.mainRunLoop = cls.runLoop.currentRunLoop()
     signal.signal(signal.SIGCHLD, cls.on_sig_child)
     
@@ -131,16 +133,23 @@ class Task(object):
         cls.log.warn('reap_child called with sig %s but there is no dead child', signum)
       else:
         task = cls.__tasks.pop(pid, None)
+  
         if task:
-          task._handle_exitstatus(sts)
-          if task.delegate:
-            task.delegate.on_exit(task)
-            task.delegate = None
+          with task.changing('is_finished', 'is_executing'):
+            task.finished = True
+            task.executing = False
+    
+            task._handle_exitstatus(sts)
+            if task.delegate:
+              task.delegate.on_exit(task)
+              task.delegate = None
     finally:
       del frame
       
     
   def __init__(self):
+    super(Task,self).__init__()
+    
     self.args = []
     self.process_id = None
     self.environment = os.environ
@@ -154,6 +163,21 @@ class Task(object):
     self.bytes_buffered = 0
     self.should_close = False
     
+  def start(self):
+    """Begins execution of the Operation."""
+    if self.process_id is not None:
+      raise RuntimeError('Task already started')
+      
+    if self.is_cancelled:
+      with self.changing('is_finished'):
+        self.finished = True
+      return
+
+
+    with self.changing('is_executing'):
+      self.executing = True 
+      self.launch()
+
   
   def launch(self):
     """Runs the process.
@@ -218,7 +242,7 @@ class Task(object):
         if _deadstate is not None:
           self._rc = _deadstate
     return self._rc
-  
+  result = termination_status
   def _handle_exitstatus(self, sts):
     if os.WIFSIGNALED(sts):
       self._rc = -os.WTERMSIG(sts)
