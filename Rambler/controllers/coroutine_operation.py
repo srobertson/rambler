@@ -101,7 +101,14 @@ class CoroutineOperation(component('Operation')):
     op.remove_observer(self, 'is_cancelled')
     
     if key_path == 'is_finished':
-      self.send(op.result)
+      try:
+        result = op.result
+      except Exception, e:
+        # if the operation finished with an exception we need to pass it up
+        # the chain.... wonder if this will muck with the stack trace or not
+        result = e
+      self.send(result)
+        
     elif key_path == 'is_cancelled':
       # is waiting here even important? generators will receive generator exit without this
       print "!!!!!!!!!! canceled !!!!!!!!!!"
