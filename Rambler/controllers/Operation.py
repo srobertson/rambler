@@ -123,6 +123,8 @@ class Operation(RObject):
   # Managing Dependencies
   
   def add_dependency(self, dependency):
+    if not isinstance(dependency,Operation):
+      raise TypeError('dependency must be an Operation not %s' % type(dependency))
     self.dependencies.add(dependency)
   
   def remove_dependency(self, dependency):
