@@ -18,7 +18,7 @@ from Rambler.ErrorFactory import ErrorFactory
 from Rambler.RunLoop import RunLoop, Port
 #from Rambler.EventChannel import EventChannel
 from Rambler.LoggingExtensions import LogService
-from Rambler import Component
+from Rambler import Component, coroutine
 
  
 class FakeApp(object):
@@ -165,6 +165,13 @@ class TestCase(unittest.TestCase):
     self.compReg.unbind()
     pass
     
+  
+  @classmethod
+  def coroutine(cls, func):
+    def test_coroutine(self):
+      op = self.CoroutineOperation(func(self),self.queue)
+      self.wait_for(op)
+    return test_coroutine
     
   @property
   def componentName(self):
