@@ -1,6 +1,6 @@
 from __future__ import with_statement
 import sys
-from Rambler.Entity import RObject
+from Rambler.robject import RObject
 class Operation(RObject):
 
   QueuePriorityVeryLow = -8
