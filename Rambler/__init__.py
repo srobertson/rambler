@@ -133,6 +133,7 @@ class error(object):
     return newError
 
 class field(object):
+  is_relation  = False
   def __init__(self, type_or_default, fget=None, fset=None, default=None):
     self.name = None # Set the first time Entity.fields() is called
     self.fget = fget
@@ -520,7 +521,8 @@ class Component(type):
   def rebase(cls):
     for d in cls.__depends__:
       comp = cls.compReg.lookup(d.__name__)
-      assert isinstance(comp, type)
+      if not isinstance(comp, type):
+        comp = type(comp)
       
       # Fix for unit tests, if the system is bound and rebound
       # the rebased object remains which  break the search algorythm
