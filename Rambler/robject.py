@@ -29,35 +29,22 @@ class RObject(object):
     KeyValueChangeInsertion   = 2
     KeyValueChangeRemoval     = 3
     KeyValueChangeReplacement = 4
+
+    
+    # Set Mutations
+    KeyValueUnionSetMutation = 1
+    KeyValueMinusSetMutation = 2
+    KeyValueIntersectSetMutation = 3
+    KeyValueSetSetMutation = 4
     
     KeyValueObservingOptionNew   = 0x01
     KeyValueObservingOptionOld   = 0x02
     
     KeyValueChangeKindKey    = intern("KeyValueChangeKindKey")
     KeyValueChangeNewKey     = intern("KeyValueChangeNewKey")
-    KeyValueChangeOldKey     = intern("KeyValueChangeNewKey")
+    KeyValueChangeOldKey     = intern("KeyValueChangeOldKey")
     KeyValueChangeIndexesKey = intern("KeyValueChangeIndexesKey")
-    
-    
-    @deprecated
-    def valueForKey(self, key):
-      return self.value_for_key(key)
-      
-    @deprecated
-    def valueForKeyPath(self, keyPath):
-      return self.value_for_key_path(keyPath)
-      
-    @deprecated
-    def valueForUndefinedKey(self, key):
-      return self.value_for_undefined_key(key)
-      
-    @deprecated
-    def setValueForKey(self, value, key):
-      return self.set_value_for_key(value, key)
-      
-    @deprecated
-    def setValueForKeyPath(self, value, keyPath):
-      return self.set_value_for_key_path(value, keyPath)
+
       
     def __init__(self, **kw):
       self.set_values(kw)
@@ -66,8 +53,6 @@ class RObject(object):
     ##  return self.value_for_undefined_key(key)
     
     def value_for_key(self, key):
-        # todo: valueForUndefinedKey.. which means we need to use
-        # __slots__ or the EDS
 
         if (not hasattr(self,key)) and (hasattr(self, '__slots__') and key not in self.__slots__):
             return self.value_for_undefined_key(key)
@@ -86,21 +71,14 @@ class RObject(object):
 
     def value_for_key_path(self, key_path):
         """Returns the value for the specified key, relative to self"""
-
-        parts = key_path.split('.')
-        key = parts[0]
-
+        
+        parts = key_path.split('.',1)
+        obj = self.value_for_key(parts[0])
         if len(parts) == 1:
-            sub_path = ""
+          return obj
         else:
-            sub_path = '.'.join(parts[1:])
-
-        obj = self.value_for_key(key)
-        if sub_path:
-            return obj.value_for_key_path(sub_path)
-        else:
-            return obj
-    
+          return obj.value_for_key_path(parts[1])
+      
     def value_for_undefined_key(self, key):
         raise AttributeError, "%s has no key %s" % (self.__class__.__name__, key)
         
@@ -141,19 +119,16 @@ class RObject(object):
 
       
     def set_value_for_key_path(self, value, key_path):
-        parts = key_path.split('.')
+        parts = key_path.split('.',1)
         key = parts[0]
 
         if len(parts) == 1:
+            self.set_value_for_key(value, parts[0])
             sub_path = ""
         else:
-            sub_path = '.'.join(parts[1:])
+            obj = self.value_for_key(parts[0])
+            obj.set_value_for_key_path(value, parts[1])
 
-        if sub_path:
-            obj = self.value_for_key(key)
-            obj.set_value_for_key_path(value, sub_path)
-        else:
-            self.set_value_for_key(value, key)
             
     def set_values(self, keyed_values):
       # values are coming in as a dictionary, we convert them to a
@@ -213,13 +188,40 @@ class RObject(object):
       # object.did_change_value_for_key('x')
       if hasattr(self, '_oldvals'):
         self._oldvals.append(self.value_for_key(key))
+    
+    def will_mutate_set(self, key, mutation, objects):
+      """
+      Invoked to inform the receiver that the specified change is about to be made to a 
+      specified unordered to-many relationship.
+
+      Parameters
+      key
+       The name of a property that is a set
       
+      mutation
+        The type of change that will be made.
+      
+      objects
+        The objects that are involved in the change 
+
+      Discussion
+      You invoke this method when implementing key-value observer compliance manually.
+      
+      """
+      #if hasattr(self, '_oldvals'):
+      #  self._oldvals.append((mutation, objects))
+      
+
+    
+    
     def did_change_value_for(self, key):
       if hasattr(self, '_oldvals'):
         oldval = self._oldvals.pop()
         value = self.value_for_key(key)
         for (observer, key_path), (options, args, kw) in self.observation_info.items():
-          if key_path != key:
+          if  key_path.endswith("*"):
+            key_path = key_path.replace('*', key)
+          elif key_path != key:
             continue
           if options:
             changes = {self.KeyValueChangeKindKey: self.KeyValueChangeSetting}
@@ -239,6 +241,35 @@ class RObject(object):
               observer.observe_value_for.im_func(observer, key_path, self, changes, *args, **kw)
             else:
               raise
+              
+    def did_mutate_set(self, key, mutation, objects):
+      if hasattr(self, '_oldvals'):
+
+        for (observer, key_path), (options, args, kw) in self.observation_info.items():
+          if  key_path.endswith("*"):
+            key_path = key_path.replace('*', key)
+          elif key_path != key:
+            continue
+          
+          if options:
+            # TODO: I think I have to map mutations to KeyValueChange<type>
+            changes = {self.KeyValueChangeKindKey: self.KeyValueChangeInsertion}
+            if self.KeyValueObservingOptionNew  & options:
+              changes[self.KeyValueChangeNewKey] = objects
+          else:
+            changes = None
+        
+          try:
+            observer.observe_value_for(key_path, self, changes, *args, **kw)
+          except TypeError:
+            # Sometimes we want both a class and instances of the classes to be observers.
+            # In this case we'll encounter unbound method errors
+            if issubclass(observer,object):
+              observer.observe_value_for.im_func(observer, key_path, self, changes, *args, **kw)
+            else:
+              raise
+        
+          
           
     def changing(self, *keys):
       """Returns a Python Context manager that simplifies  KVO notifications.
