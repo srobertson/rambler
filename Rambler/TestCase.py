@@ -171,6 +171,7 @@ class TestCase(unittest.TestCase):
     def test_coroutine(self):
       op = self.CoroutineOperation(func(self),self.queue)
       self.wait_for(op)
+      op.result
     return test_coroutine
     
   @property
