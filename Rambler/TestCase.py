@@ -4,7 +4,14 @@ import inspect
 import errno
 import os
 import sys
-import unittest
+
+
+if sys.hexversion > 0x02070000:
+  import unittest
+else:
+  # Use unittest2 for python versions older than 2.7
+  import unittest2 as unittest
+
 
 import yaml
 
