@@ -207,12 +207,7 @@ class RObject(object):
       Discussion
       You invoke this method when implementing key-value observer compliance manually.
       
-      """
-      #if hasattr(self, '_oldvals'):
-      #  self._oldvals.append((mutation, objects))
-      
-
-    
+      """    
     
     def did_change_value_for(self, key):
       if hasattr(self, '_oldvals'):
@@ -253,9 +248,14 @@ class RObject(object):
           
           if options:
             # TODO: I think I have to map mutations to KeyValueChange<type>
-            changes = {self.KeyValueChangeKindKey: self.KeyValueChangeInsertion}
-            if self.KeyValueObservingOptionNew  & options:
-              changes[self.KeyValueChangeNewKey] = objects
+            if mutation == self.KeyValueUnionSetMutation:
+              changes = {self.KeyValueChangeKindKey: self.KeyValueChangeInsertion}
+              if self.KeyValueObservingOptionNew  & options:
+                changes[self.KeyValueChangeNewKey] = objects
+            elif mutation == self.KeyValueMinusSetMutation:
+              changes = {self.KeyValueChangeKindKey: self.KeyValueChangeRemoval}
+              if self.KeyValueObservingOptionOld  & options:
+                changes[self.KeyValueChangeOldKey] = objects
           else:
             changes = None
         
